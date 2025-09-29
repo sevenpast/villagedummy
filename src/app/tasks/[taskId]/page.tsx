@@ -787,11 +787,10 @@ ${currentUser?.first_name || 'Your Name'}`
         </div>
 
         <div className="text-center space-y-3">
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(
-                language === 'German' ? 
-                `Sehr geehrte Damen und Herren,
+          <a
+            href={`mailto:migration@${currentUser?.target_canton?.toLowerCase() || 'zurich'}.ch?subject=${encodeURIComponent('Inquiry about Registration Requirements')}&body=${encodeURIComponent(
+              language === 'German' ? 
+              `Sehr geehrte Damen und Herren,
 
 ich bin ein neuer Einwohner in Ihrer Gemeinde und möchte mich gemäß den gesetzlichen Bestimmungen innerhalb von 14 Tagen anmelden.
 
@@ -801,7 +800,7 @@ Vielen Dank für Ihre Hilfe.
 
 Mit freundlichen Grüßen
 ${currentUser?.first_name || 'Your Name'}` :
-                `Madame, Monsieur,
+              `Madame, Monsieur,
 
 Je suis un nouveau résident dans votre commune et je souhaite m'inscrire conformément aux dispositions légales dans les 14 jours.
 
@@ -811,12 +810,11 @@ Merci pour votre aide.
 
 Cordialement
 ${currentUser?.first_name || 'Your Name'}`
-              );
-            }}
-            className="w-full max-w-xs bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300"
+            )}`}
+            className="w-full max-w-xs bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300 text-center block"
           >
-            Copy Email to Clipboard
-          </button>
+            Open Email App
+          </a>
           <button
             onClick={() => setGemeindeWorkflowStep('reminder')}
             className="w-full max-w-xs bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300"
@@ -1160,15 +1158,25 @@ ${currentUser?.first_name || 'Your Name'}`
         </div>
 
         <div className="text-center">
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(document.querySelector('.bg-white.border')?.textContent || '');
-              alert('Email copied to clipboard!');
-            }}
-            className="w-full max-w-xs bg-gray-200 text-gray-800 px-6 py-3 rounded-md hover:bg-gray-300 text-lg font-medium"
+          <a
+            href={`mailto:schulverwaltung@${currentUser?.target_municipality?.toLowerCase().replace(/\s+/g, '') || 'municipality'}.ch?subject=${encodeURIComponent('School Registration Inquiry')}&body=${encodeURIComponent(`Dear School Administration,
+
+I am writing to inquire about the school registration process for my child(ren).
+
+Could you please provide me with information about:
+• Required documents for registration
+• Registration deadlines
+• Available appointment times
+• Any specific forms that need to be completed
+
+Thank you for your assistance.
+
+Best regards,
+${currentUser?.first_name || 'Your Name'} ${currentUser?.last_name || ''}`)}`}
+            className="w-full max-w-xs bg-gray-200 text-gray-800 px-6 py-3 rounded-md hover:bg-gray-300 text-lg font-medium text-center block"
           >
-            Copy Email to Clipboard
-          </button>
+            Open Email App
+          </a>
         </div>
       </div>
     );
@@ -1405,15 +1413,24 @@ ${currentUser?.first_name || 'Your Name'}`
         </div>
 
         <div className="text-center">
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(document.querySelector('.bg-white.border')?.textContent || '');
-              alert('Email copied to clipboard!');
-            }}
-            className="w-full max-w-xs bg-gray-200 text-gray-800 px-6 py-3 rounded-md hover:bg-gray-300 text-lg font-medium"
+          <a
+            href={`mailto:migration@${currentUser?.target_canton?.toLowerCase() || 'zurich'}.ch?subject=${encodeURIComponent('Inquiry about Biometric Appointment Letter')}&body=${encodeURIComponent(`Dear Migration Office,
+
+I registered at my municipality more than 3 weeks ago and have not yet received my biometric appointment letter.
+
+Could you please provide me with information about:
+• The status of my application
+• When I can expect to receive the appointment letter
+• If there are any additional documents required
+
+Thank you for your assistance.
+
+Best regards,
+${currentUser?.first_name || 'Your Name'} ${currentUser?.last_name || ''}`)}`}
+            className="w-full max-w-xs bg-gray-200 text-gray-800 px-6 py-3 rounded-md hover:bg-gray-300 text-lg font-medium text-center block"
           >
-            Copy Email to Clipboard
-          </button>
+            Open Email App
+          </a>
         </div>
       </div>
     );
