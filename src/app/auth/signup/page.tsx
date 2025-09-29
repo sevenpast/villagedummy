@@ -1,0 +1,484 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
+
+// Country data for the dropdown
+const countries = [
+  { code: 'DE', name: 'Germany' },
+  { code: 'FR', name: 'France' },
+  { code: 'IT', name: 'Italy' },
+  { code: 'AT', name: 'Austria' },
+  { code: 'ES', name: 'Spain' },
+  { code: 'NL', name: 'Netherlands' },
+  { code: 'BE', name: 'Belgium' },
+  { code: 'CH', name: 'Switzerland' },
+  { code: 'NO', name: 'Norway' },
+  { code: 'IS', name: 'Iceland' },
+  { code: 'LI', name: 'Liechtenstein' },
+  { code: 'US', name: 'United States' },
+  { code: 'CA', name: 'Canada' },
+  { code: 'GB', name: 'United Kingdom' },
+  { code: 'AU', name: 'Australia' },
+  { code: 'NZ', name: 'New Zealand' },
+  { code: 'JP', name: 'Japan' },
+  { code: 'KR', name: 'South Korea' },
+  { code: 'IN', name: 'India' },
+  { code: 'BR', name: 'Brazil' },
+  { code: 'AR', name: 'Argentina' },
+  { code: 'MX', name: 'Mexico' },
+  { code: 'CN', name: 'China' },
+  { code: 'TW', name: 'Taiwan' },
+  { code: 'SG', name: 'Singapore' },
+  { code: 'HK', name: 'Hong Kong' },
+  { code: 'MY', name: 'Malaysia' },
+  { code: 'TH', name: 'Thailand' },
+  { code: 'PH', name: 'Philippines' },
+  { code: 'ID', name: 'Indonesia' },
+  { code: 'VN', name: 'Vietnam' },
+  { code: 'RU', name: 'Russia' },
+  { code: 'UA', name: 'Ukraine' },
+  { code: 'PL', name: 'Poland' },
+  { code: 'CZ', name: 'Czech Republic' },
+  { code: 'HU', name: 'Hungary' },
+  { code: 'RO', name: 'Romania' },
+  { code: 'BG', name: 'Bulgaria' },
+  { code: 'HR', name: 'Croatia' },
+  { code: 'SI', name: 'Slovenia' },
+  { code: 'SK', name: 'Slovakia' },
+  { code: 'LT', name: 'Lithuania' },
+  { code: 'LV', name: 'Latvia' },
+  { code: 'EE', name: 'Estonia' },
+  { code: 'FI', name: 'Finland' },
+  { code: 'SE', name: 'Sweden' },
+  { code: 'DK', name: 'Denmark' },
+  { code: 'IE', name: 'Ireland' },
+  { code: 'PT', name: 'Portugal' },
+  { code: 'GR', name: 'Greece' },
+  { code: 'CY', name: 'Cyprus' },
+  { code: 'MT', name: 'Malta' },
+  { code: 'LU', name: 'Luxembourg' },
+  { code: 'ZA', name: 'South Africa' },
+  { code: 'EG', name: 'Egypt' },
+  { code: 'NG', name: 'Nigeria' },
+  { code: 'KE', name: 'Kenya' },
+  { code: 'MA', name: 'Morocco' },
+  { code: 'TN', name: 'Tunisia' },
+  { code: 'IL', name: 'Israel' },
+  { code: 'TR', name: 'Turkey' },
+  { code: 'SA', name: 'Saudi Arabia' },
+  { code: 'AE', name: 'United Arab Emirates' },
+  { code: 'QA', name: 'Qatar' },
+  { code: 'KW', name: 'Kuwait' },
+  { code: 'BH', name: 'Bahrain' },
+  { code: 'OM', name: 'Oman' },
+  { code: 'JO', name: 'Jordan' },
+  { code: 'LB', name: 'Lebanon' },
+  { code: 'OTHER', name: 'Other' },
+];
+
+// Swiss cantons
+const cantons = [
+  'ZH', 'BE', 'LU', 'UR', 'SZ', 'OW', 'NW', 'GL', 'ZG', 'FR', 'SO', 'BS', 'BL', 'SH', 'AR', 'AI', 'SG', 'GR', 'AG', 'TG', 'TI', 'VD', 'VS', 'NE', 'GE', 'JU'
+];
+
+export default function SignUpPage() {
+  const [formData, setFormData] = useState({
+    // Basic info
+    name: '',
+    password: '',
+    
+    // Critical profile information
+    countryOfOrigin: '',
+    hasChildren: false,
+    childrenCount: 0,
+    
+    // Target location
+    targetCanton: '',
+    targetMunicipality: '',
+    targetPostalCode: '',
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData(prev => ({
+        ...prev,
+        [name]: checked,
+        // Reset children count if hasChildren is false
+        childrenCount: name === 'hasChildren' && !checked ? 0 : prev.childrenCount,
+        schoolAgeChildrenCount: name === 'hasChildren' && !checked ? 0 : prev.schoolAgeChildrenCount,
+      }));
+    } else if (type === 'number') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: parseInt(value) || 0,
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: '',
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    // Basic validation
+    if (!formData.name) newErrors.name = 'Name is required';
+    if (!formData.password) newErrors.password = 'Password is required';
+
+    // Critical profile information - country is optional
+    // if (!formData.countryOfOrigin) {
+    //   newErrors.countryOfOrigin = 'Country of origin is required';
+    // }
+
+    // Children validation
+    if (formData.hasChildren && formData.childrenCount === 0) {
+      newErrors.childrenCount = 'Please specify number of children';
+    }
+
+    // Target location validation - canton is optional
+    // if (!formData.targetCanton) {
+    //   newErrors.targetCanton = 'Target canton is required';
+    // }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      // Determine EU/EFTA status based on country (if provided)
+      const euEftaCountries = ['DE', 'FR', 'IT', 'AT', 'ES', 'NL', 'BE', 'NO', 'IS', 'LI', 'CH'];
+      const isEUEFTA = formData.countryOfOrigin ? euEftaCountries.includes(formData.countryOfOrigin) : false;
+
+      // Create a simple user profile without Supabase Auth
+      // We'll use a simple session-based system instead
+      const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const profileData = {
+        id: userId,
+        first_name: formData.name,
+        country_of_origin: formData.countryOfOrigin,
+        is_eu_efta_citizen: isEUEFTA,
+        has_children: formData.hasChildren,
+        children_count: formData.childrenCount,
+        target_canton: formData.targetCanton,
+        target_municipality: formData.targetMunicipality,
+        target_postal_code: formData.targetPostalCode,
+        profile_completeness: {
+          basic_info: true,
+          country_info: true,
+          family_info: formData.hasChildren,
+          location_info: !!formData.targetCanton,
+          completeness_percentage: formData.hasChildren && formData.targetCanton ? 100 : 80
+        },
+        password_hash: btoa(formData.password), // Simple base64 encoding (not secure for production)
+        created_at: new Date().toISOString()
+      };
+
+      // Store user data in localStorage for now (simple solution)
+      const existingUsers = JSON.parse(localStorage.getItem('expatvillage_users') || '[]');
+      existingUsers.push(profileData);
+      localStorage.setItem('expatvillage_users', JSON.stringify(existingUsers));
+      
+      // Store current user session
+      localStorage.setItem('expatvillage_current_user', JSON.stringify(profileData));
+
+      // Show success state and redirect
+      setIsSuccess(true);
+      setTimeout(() => {
+        window.location.href = '/auth/signin';
+      }, 1500);
+      
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      setErrors({ submit: error.message || 'Failed to create account. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+          const selectedCountry = countries.find(c => c.code === formData.countryOfOrigin);
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          Create your account
+        </h2>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Join ExpatVillage to get personalized guidance for your move to Switzerland
+        </p>
+      </div>
+
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <form className="space-y-6" onSubmit={handleSubmit}>
+                    {/* Basic Information */}
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                            Name *
+                          </label>
+                          <input
+                            id="name"
+                            name="name"
+                            type="text"
+                            required
+                            value={formData.name}
+                            onChange={handleInputChange}
+                            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                              errors.name ? 'border-red-300' : 'border-gray-300'
+                            }`}
+                            placeholder="Enter your full name"
+                          />
+                          {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+                        </div>
+
+                        <div>
+                          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                            Password *
+                          </label>
+                          <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            required
+                            value={formData.password}
+                            onChange={handleInputChange}
+                            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                              errors.password ? 'border-red-300' : 'border-gray-300'
+                            }`}
+                            placeholder="Enter your password"
+                          />
+                          {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
+                        </div>
+                      </div>
+                    </div>
+
+            {/* Critical Profile Information */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Critical Profile Information</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                This information is essential for the app to show you the right tasks and guidance.
+              </p>
+
+                      {/* Country of Origin */}
+                      <div className="mb-4">
+                        <label htmlFor="countryOfOrigin" className="block text-sm font-medium text-gray-700">
+                          Country of Origin
+                        </label>
+                <select
+                  id="countryOfOrigin"
+                  name="countryOfOrigin"
+                  value={formData.countryOfOrigin}
+                  onChange={handleInputChange}
+                  className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.countryOfOrigin ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                >
+                  <option value="">Select your country</option>
+                          {countries.map((country) => (
+                            <option key={country.code} value={country.code}>
+                              {country.name}
+                            </option>
+                          ))}
+                </select>
+                        {errors.countryOfOrigin && <p className="mt-1 text-sm text-red-600">{errors.countryOfOrigin}</p>}
+              </div>
+
+              {/* Family Status */}
+              <div className="mb-4">
+                <div className="flex items-center">
+                  <input
+                    id="hasChildren"
+                    name="hasChildren"
+                    type="checkbox"
+                    checked={formData.hasChildren}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="hasChildren" className="ml-2 block text-sm font-medium text-gray-700">
+                    I have children
+                  </label>
+                </div>
+                
+                        {formData.hasChildren && (
+                          <div className="mt-3">
+                            <label htmlFor="childrenCount" className="block text-sm font-medium text-gray-700">
+                              Number of Children *
+                            </label>
+                            <input
+                              id="childrenCount"
+                              name="childrenCount"
+                              type="number"
+                              min="1"
+                              max="10"
+                              value={formData.childrenCount}
+                              onChange={handleInputChange}
+                              className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                                errors.childrenCount ? 'border-red-300' : 'border-gray-300'
+                              }`}
+                            />
+                            {errors.childrenCount && <p className="mt-1 text-sm text-red-600">{errors.childrenCount}</p>}
+                          </div>
+                        )}
+              </div>
+            </div>
+
+            {/* Target Location */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Target Location in Switzerland</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                This helps us provide location-specific guidance and requirements.
+              </p>
+
+              <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="targetCanton" className="block text-sm font-medium text-gray-700">
+                            Target Canton
+                          </label>
+                  <select
+                    id="targetCanton"
+                    name="targetCanton"
+                    value={formData.targetCanton}
+                    onChange={handleInputChange}
+                    className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                      errors.targetCanton ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                  >
+                    <option value="">Select canton</option>
+                    {cantons.map((canton) => (
+                      <option key={canton} value={canton}>
+                        {canton}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.targetCanton && <p className="mt-1 text-sm text-red-600">{errors.targetCanton}</p>}
+                </div>
+
+                <div>
+                  <label htmlFor="targetPostalCode" className="block text-sm font-medium text-gray-700">
+                    Postal Code
+                  </label>
+                  <input
+                    id="targetPostalCode"
+                    name="targetPostalCode"
+                    type="text"
+                    value={formData.targetPostalCode}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <label htmlFor="targetMunicipality" className="block text-sm font-medium text-gray-700">
+                  Municipality/City
+                </label>
+                <input
+                  id="targetMunicipality"
+                  name="targetMunicipality"
+                  type="text"
+                  value={formData.targetMunicipality}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+                    {/* Submit Button */}
+                    <div>
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || isSuccess}
+                        className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed ${
+                          isSuccess 
+                            ? 'bg-gray-200 hover:bg-gray-300' 
+                            : 'bg-gray-200 hover:bg-gray-300'
+                        }`}
+                      >
+                        {isSuccess ? (
+                          <div className="flex items-center">
+                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Account created! Redirecting...
+                          </div>
+                        ) : isSubmitting ? (
+                          <div className="flex items-center">
+                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Creating Account...
+                          </div>
+                        ) : (
+                          'Create Account'
+                        )}
+                      </button>
+                    </div>
+
+            {errors.submit && (
+              <div className="text-center">
+                <p className="text-sm text-red-600">{errors.submit}</p>
+              </div>
+            )}
+
+            {isSuccess && (
+              <div className="text-center">
+                <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                  <div className="flex items-center justify-center">
+                    <svg className="h-5 w-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-sm text-green-800">Account created successfully! Redirecting to sign in...</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="text-center">
+              <p className="text-sm text-gray-600">
+                Already have an account?{' '}
+                <Link href="/auth/signin" className="font-medium text-blue-600 hover:text-blue-500">
+                  Sign in
+                </Link>
+              </p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
