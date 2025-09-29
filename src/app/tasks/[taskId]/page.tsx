@@ -191,7 +191,7 @@ export default function TaskDetailPage() {
   };
   
   // Workflow step states - each task has its own progression
-  const [workflowStep, setWorkflowStep] = useState<'intro' | 'info' | 'question' | 'search' | 'toppicks' | 'application' | 'completed'>('intro');
+  const [workflowStep, setWorkflowStep] = useState<'intro' | 'info' | 'question' | 'search' | 'toppicks' | 'application' | 'reminder' | 'completed'>('intro');
   const [gemeindeWorkflowStep, setGemeindeWorkflowStep] = useState<'intro' | 'info' | 'question' | 'opening-hours' | 'email' | 'reminder' | 'completed'>('intro');
   const [schoolWorkflowStep, setSchoolWorkflowStep] = useState<'intro' | 'question' | 'research' | 'pdf-form' | 'online-portal' | 'fallback-email' | 'reminder' | 'completed'>('intro');
   const [permitWorkflowStep, setPermitWorkflowStep] = useState<'intro' | 'info' | 'question' | 'time-check' | 'email-generator' | 'reminder' | 'completed'>('intro');
@@ -1769,11 +1769,9 @@ ${currentUser?.first_name || 'Your Name'}`
     };
 
     // Auto-complete task when user confirms they have permit
-    useEffect(() => {
-      if (hasWorkPermit === true) {
-        markTaskAsCompletedLocal();
-      }
-    }, [hasWorkPermit, task.id]); // Added task.id to dependency array for completeness
+    if (hasWorkPermit === true) {
+      markTaskAsCompletedLocal();
+    }
 
     return (
       <div className="text-center">
@@ -2131,7 +2129,7 @@ ${currentUser?.first_name || 'Your Name'}`
                 <div className="mb-3">
                   <h4 className="text-sm font-medium text-gray-900 mb-2">Features:</h4>
                   <div className="flex flex-wrap gap-1">
-                    {pick.features.map((feature, index) => (
+                    {pick.features.map((feature: string, index: number) => (
                       <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
                         {feature}
                       </span>

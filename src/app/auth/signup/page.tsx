@@ -93,6 +93,7 @@ export default function SignUpPage() {
     countryOfOrigin: '',
     hasChildren: false,
     childrenCount: 0,
+    schoolAgeChildrenCount: 0,
     
     // Target location
     targetCanton: '',

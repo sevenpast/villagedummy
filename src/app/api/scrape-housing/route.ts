@@ -116,7 +116,7 @@ async function scrapePortal(urlData: any) {
     });
 
     const $ = cheerio.load(response.data);
-    const results = [];
+    const results: any[] = [];
 
     // Try to find listings using the selectors
     $(urlData.selectors.container).each((index, element) => {
