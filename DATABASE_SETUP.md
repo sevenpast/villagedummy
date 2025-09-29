@@ -1,4 +1,4 @@
-# ExpatVillage Database Setup Guide
+# Village Database Setup Guide
 
 ## Overview
 
@@ -49,17 +49,17 @@ This database stores the three critical pieces of user information that determin
 
 1. **Create database:**
    ```sql
-   CREATE DATABASE expatvillage;
+   CREATE DATABASE village;
    ```
 
 2. **Run schema:**
    ```bash
-   psql -d expatvillage -f database_schema.sql
+   psql -d village -f database_schema.sql
    ```
 
 3. **Set up permissions:**
    ```bash
-   psql -d expatvillage -f database_permissions.sql
+   psql -d village -f database_permissions.sql
    ```
 
 ## Database Schema
@@ -118,9 +118,9 @@ Returns the correct content variant for a task based on user profile completenes
 - Task status is user-specific
 
 ### User Roles
-- `expatvillage_admin` - Full administrative access
-- `expatvillage_app_user` - Application read/write access
-- `expatvillage_readonly` - Read-only access for analytics
+- `village_admin` - Full administrative access
+- `village_app_user` - Application read/write access
+- `village_readonly` - Read-only access for analytics
 
 ## Sample Data
 

@@ -79,7 +79,7 @@ function TaskCard({ task, user }: { task: any, user: any }) {
     if (!user?.first_name) return false; // No user, no completion
     
     // Use user-specific localStorage key to prevent cross-user contamination
-    const userSpecificKey = `expatvillage_completed_tasks_${user.first_name}`;
+    const userSpecificKey = `village_completed_tasks_${user.first_name}`;
     const completedTasks = JSON.parse(localStorage.getItem(userSpecificKey) || '[]');
     return completedTasks.includes(task.id);
   };
@@ -113,7 +113,7 @@ export default function Home() {
 
   useEffect(() => {
     // Check if user is logged in
-    const userData = localStorage.getItem('expatvillage_current_user');
+    const userData = localStorage.getItem('village_current_user');
     if (userData) {
       setCurrentUser(JSON.parse(userData));
     }
@@ -121,7 +121,7 @@ export default function Home() {
   }, []);
 
   const handleSignOut = () => {
-    localStorage.removeItem('expatvillage_current_user');
+    localStorage.removeItem('village_current_user');
     setCurrentUser(null);
   };
 
@@ -141,7 +141,7 @@ export default function Home() {
       <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Welcome to ExpatVillage
+            Welcome to Village
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Your personal guide to settling in Switzerland

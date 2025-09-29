@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ExpatVillage - Your Guide to Switzerland",
+  title: "Village - Your Guide to Switzerland",
   description: "Personal task management system for expats moving to Switzerland",
 };
 

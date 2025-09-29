@@ -1,59 +1,59 @@
--- Database Permissions and Access Control for ExpatVillage
+-- Database Permissions and Access Control for Village
 -- This file sets up proper permissions for different user roles
 
 -- Create roles for different access levels
-CREATE ROLE expatvillage_admin;
-CREATE ROLE expatvillage_app_user;
-CREATE ROLE expatvillage_readonly;
+CREATE ROLE village_admin;
+CREATE ROLE village_app_user;
+CREATE ROLE village_readonly;
 
 -- Grant permissions to admin role (full access)
-GRANT ALL PRIVILEGES ON DATABASE expatvillage TO expatvillage_admin;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO expatvillage_admin;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO expatvillage_admin;
-GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO expatvillage_admin;
+GRANT ALL PRIVILEGES ON DATABASE village TO village_admin;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO village_admin;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO village_admin;
+GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO village_admin;
 
 -- Grant permissions to app user role (application access)
-GRANT CONNECT ON DATABASE expatvillage TO expatvillage_app_user;
-GRANT USAGE ON SCHEMA public TO expatvillage_app_user;
+GRANT CONNECT ON DATABASE village TO village_app_user;
+GRANT USAGE ON SCHEMA public TO village_app_user;
 
 -- Table-specific permissions for app user
-GRANT SELECT, INSERT, UPDATE, DELETE ON user_profiles TO expatvillage_app_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON user_task_status TO expatvillage_app_user;
-GRANT SELECT ON tasks TO expatvillage_app_user;
-GRANT SELECT ON task_visibility_rules TO expatvillage_app_user;
-GRANT SELECT ON task_content TO expatvillage_app_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON user_profiles TO village_app_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON user_task_status TO village_app_user;
+GRANT SELECT ON tasks TO village_app_user;
+GRANT SELECT ON task_visibility_rules TO village_app_user;
+GRANT SELECT ON task_content TO village_app_user;
 
 -- Sequence permissions for app user
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO expatvillage_app_user;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO village_app_user;
 
 -- Function permissions for app user
-GRANT EXECUTE ON FUNCTION calculate_profile_completeness(UUID) TO expatvillage_app_user;
-GRANT EXECUTE ON FUNCTION update_profile_completeness() TO expatvillage_app_user;
+GRANT EXECUTE ON FUNCTION calculate_profile_completeness(UUID) TO village_app_user;
+GRANT EXECUTE ON FUNCTION update_profile_completeness() TO village_app_user;
 
 -- View permissions for app user
-GRANT SELECT ON user_profiles_with_completeness TO expatvillage_app_user;
+GRANT SELECT ON user_profiles_with_completeness TO village_app_user;
 
 -- Grant permissions to readonly role (analytics/reporting)
-GRANT CONNECT ON DATABASE expatvillage TO expatvillage_readonly;
-GRANT USAGE ON SCHEMA public TO expatvillage_readonly;
-GRANT SELECT ON user_profiles TO expatvillage_readonly;
-GRANT SELECT ON user_task_status TO expatvillage_readonly;
-GRANT SELECT ON tasks TO expatvillage_readonly;
-GRANT SELECT ON task_visibility_rules TO expatvillage_readonly;
-GRANT SELECT ON task_content TO expatvillage_readonly;
-GRANT SELECT ON user_profiles_with_completeness TO expatvillage_readonly;
+GRANT CONNECT ON DATABASE village TO village_readonly;
+GRANT USAGE ON SCHEMA public TO village_readonly;
+GRANT SELECT ON user_profiles TO village_readonly;
+GRANT SELECT ON user_task_status TO village_readonly;
+GRANT SELECT ON tasks TO village_readonly;
+GRANT SELECT ON task_visibility_rules TO village_readonly;
+GRANT SELECT ON task_content TO village_readonly;
+GRANT SELECT ON user_profiles_with_completeness TO village_readonly;
 
 -- Supabase-specific permissions (if using Supabase)
 -- These are typically handled automatically by Supabase, but here for reference:
 
 -- Grant permissions to authenticated users (Supabase auth)
-GRANT expatvillage_app_user TO authenticated;
+GRANT village_app_user TO authenticated;
 
 -- Grant permissions to anon users (limited access)
-GRANT expatvillage_readonly TO anon;
+GRANT village_readonly TO anon;
 
 -- Service role permissions (for server-side operations)
-GRANT expatvillage_admin TO service_role;
+GRANT village_admin TO service_role;
 
 -- Create indexes for performance (if not already created in main schema)
 CREATE INDEX IF NOT EXISTS idx_user_profiles_created_at ON user_profiles(created_at);
@@ -66,9 +66,9 @@ CREATE INDEX IF NOT EXISTS idx_user_profiles_country_children ON user_profiles(c
 CREATE INDEX IF NOT EXISTS idx_user_profiles_eu_municipality ON user_profiles(is_eu_efta_citizen, target_municipality);
 
 -- Grant permissions on indexes
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO expatvillage_admin;
-GRANT SELECT, INSERT, UPDATE, DELETE ON user_profiles TO expatvillage_app_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON user_task_status TO expatvillage_app_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO village_admin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON user_profiles TO village_app_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON user_task_status TO village_app_user;
 
 -- Create a function to check if user has complete profile
 CREATE OR REPLACE FUNCTION user_has_complete_profile(user_uuid UUID)
@@ -93,8 +93,8 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Grant execute permission on the function
-GRANT EXECUTE ON FUNCTION user_has_complete_profile(UUID) TO expatvillage_app_user;
-GRANT EXECUTE ON FUNCTION user_has_complete_profile(UUID) TO expatvillage_readonly;
+GRANT EXECUTE ON FUNCTION user_has_complete_profile(UUID) TO village_app_user;
+GRANT EXECUTE ON FUNCTION user_has_complete_profile(UUID) TO village_readonly;
 
 -- Create a function to get user's visible tasks based on profile
 CREATE OR REPLACE FUNCTION get_user_visible_tasks(user_uuid UUID)
@@ -132,12 +132,12 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Grant execute permission on the function
-GRANT EXECUTE ON FUNCTION get_user_visible_tasks(UUID) TO expatvillage_app_user;
-GRANT EXECUTE ON FUNCTION get_user_visible_tasks(UUID) TO expatvillage_readonly;
+GRANT EXECUTE ON FUNCTION get_user_visible_tasks(UUID) TO village_app_user;
+GRANT EXECUTE ON FUNCTION get_user_visible_tasks(UUID) TO village_readonly;
 
 -- Grant execute permission on the content variant function
-GRANT EXECUTE ON FUNCTION get_task_content_variant(UUID, VARCHAR(50)) TO expatvillage_app_user;
-GRANT EXECUTE ON FUNCTION get_task_content_variant(UUID, VARCHAR(50)) TO expatvillage_readonly;
+GRANT EXECUTE ON FUNCTION get_task_content_variant(UUID, VARCHAR(50)) TO village_app_user;
+GRANT EXECUTE ON FUNCTION get_task_content_variant(UUID, VARCHAR(50)) TO village_readonly;
 
 -- Create audit log table for tracking profile changes
 CREATE TABLE IF NOT EXISTS user_profile_audit (
@@ -151,8 +151,8 @@ CREATE TABLE IF NOT EXISTS user_profile_audit (
 );
 
 -- Grant permissions on audit table
-GRANT SELECT, INSERT ON user_profile_audit TO expatvillage_app_user;
-GRANT SELECT ON user_profile_audit TO expatvillage_readonly;
+GRANT SELECT, INSERT ON user_profile_audit TO village_app_user;
+GRANT SELECT ON user_profile_audit TO village_readonly;
 
 -- Create trigger function for audit logging
 CREATE OR REPLACE FUNCTION log_profile_changes()
@@ -191,12 +191,12 @@ CREATE TRIGGER trigger_log_profile_changes
   EXECUTE FUNCTION log_profile_changes();
 
 -- Grant execute permission on audit function
-GRANT EXECUTE ON FUNCTION log_profile_changes() TO expatvillage_app_user;
+GRANT EXECUTE ON FUNCTION log_profile_changes() TO village_app_user;
 
 -- Comments for documentation
-COMMENT ON ROLE expatvillage_admin IS 'Full administrative access to the ExpatVillage database';
-COMMENT ON ROLE expatvillage_app_user IS 'Application user role with read/write access to user data';
-COMMENT ON ROLE expatvillage_readonly IS 'Read-only access for analytics and reporting';
+COMMENT ON ROLE village_admin IS 'Full administrative access to the Village database';
+COMMENT ON ROLE village_app_user IS 'Application user role with read/write access to user data';
+COMMENT ON ROLE village_readonly IS 'Read-only access for analytics and reporting';
 COMMENT ON FUNCTION user_has_complete_profile(UUID) IS 'Checks if a user has provided all three critical profile pieces';
 COMMENT ON FUNCTION get_user_visible_tasks(UUID) IS 'Returns tasks visible to a user based on their profile';
 COMMENT ON TABLE user_profile_audit IS 'Audit log for tracking changes to user profile information';

@@ -178,7 +178,7 @@ export default function TaskDetailPage() {
 
   // Helper function for user-specific task completion tracking
   const getUserSpecificKey = (user: any) => {
-    return user?.first_name ? `expatvillage_completed_tasks_${user.first_name}` : 'expatvillage_completed_tasks';
+    return user?.first_name ? `village_completed_tasks_${user.first_name}` : 'village_completed_tasks';
   };
 
   const markTaskAsCompleted = (taskId: string) => {
@@ -213,7 +213,7 @@ export default function TaskDetailPage() {
 
   useEffect(() => {
     // Initialize user data from localStorage (fallback authentication)
-    const userData = localStorage.getItem('expatvillage_current_user');
+    const userData = localStorage.getItem('village_current_user');
     if (userData) {
       setCurrentUser(JSON.parse(userData));
     }
@@ -686,7 +686,7 @@ export default function TaskDetailPage() {
                 markTaskAsCompleted('register_gemeinde');
                 // Critical: Store completion date for Task 5's 3-week time check
                 const userKey = getUserSpecificKey(currentUser);
-                localStorage.setItem(`expatvillage_gemeinde_completed_date_${currentUser?.first_name || 'default'}`, new Date().toISOString());
+                localStorage.setItem(`village_gemeinde_completed_date_${currentUser?.first_name || 'default'}`, new Date().toISOString());
                 setGemeindeWorkflowStep('completed');
               }}
             className="w-full max-w-xs bg-gray-200 text-gray-800 px-6 py-3 rounded-md hover:bg-gray-300 text-lg font-medium"

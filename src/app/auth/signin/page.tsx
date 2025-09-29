@@ -56,7 +56,7 @@ export default function SignInPage() {
     
     try {
       // Simple authentication without email
-      const existingUsers = JSON.parse(localStorage.getItem('expatvillage_users') || '[]');
+      const existingUsers = JSON.parse(localStorage.getItem('village_users') || '[]');
       
       // Find user by name and password
       const user = existingUsers.find((u: any) => 
@@ -69,7 +69,7 @@ export default function SignInPage() {
       }
 
       // Store current user session
-      localStorage.setItem('expatvillage_current_user', JSON.stringify(user));
+      localStorage.setItem('village_current_user', JSON.stringify(user));
 
       // Show success state and redirect
       setIsSuccess(true);
@@ -92,7 +92,7 @@ export default function SignInPage() {
           Sign in to your account
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Welcome back to ExpatVillage
+          Welcome back to Village
         </p>
       </div>
 

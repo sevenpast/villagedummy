@@ -12,7 +12,7 @@
 Erstelle eine `.env.local` Datei im Root-Verzeichnis der App:
 
 ```bash
-# In /Users/andy/Documents/ExpatVillage/DummyPage2/expat-village-app/
+# In /Users/andy/Documents/Village/DummyPage2/expat-village-app/
 touch .env.local
 ```
 

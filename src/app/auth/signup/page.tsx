@@ -204,12 +204,12 @@ export default function SignUpPage() {
       };
 
       // Store user data in localStorage for now (simple solution)
-      const existingUsers = JSON.parse(localStorage.getItem('expatvillage_users') || '[]');
+      const existingUsers = JSON.parse(localStorage.getItem('village_users') || '[]');
       existingUsers.push(profileData);
-      localStorage.setItem('expatvillage_users', JSON.stringify(existingUsers));
+      localStorage.setItem('village_users', JSON.stringify(existingUsers));
       
       // Store current user session
-      localStorage.setItem('expatvillage_current_user', JSON.stringify(profileData));
+      localStorage.setItem('village_current_user', JSON.stringify(profileData));
 
       // Show success state and redirect
       setIsSuccess(true);
@@ -234,7 +234,7 @@ export default function SignUpPage() {
           Create your account
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Join ExpatVillage to get personalized guidance for your move to Switzerland
+          Join Village to get personalized guidance for your move to Switzerland
         </p>
       </div>
 

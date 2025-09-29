@@ -101,7 +101,7 @@ export default function ProfileSettingsPage() {
 
   useEffect(() => {
     // Get current user from localStorage
-    const userData = localStorage.getItem('expatvillage_current_user');
+    const userData = localStorage.getItem('village_current_user');
     if (userData) {
       const user = JSON.parse(userData);
       setCurrentUser(user);
@@ -210,15 +210,15 @@ export default function ProfileSettingsPage() {
       updatedUser.profile_completeness.completeness_percentage = (completedFields / 4) * 100;
 
       // Update localStorage
-      const existingUsers = JSON.parse(localStorage.getItem('expatvillage_users') || '[]');
+      const existingUsers = JSON.parse(localStorage.getItem('village_users') || '[]');
       const userIndex = existingUsers.findIndex((u: any) => u.id === currentUser.id);
       if (userIndex !== -1) {
         existingUsers[userIndex] = updatedUser;
-        localStorage.setItem('expatvillage_users', JSON.stringify(existingUsers));
+        localStorage.setItem('village_users', JSON.stringify(existingUsers));
       }
       
       // Update current user session
-      localStorage.setItem('expatvillage_current_user', JSON.stringify(updatedUser));
+      localStorage.setItem('village_current_user', JSON.stringify(updatedUser));
       setCurrentUser(updatedUser);
 
       // Show success state and redirect

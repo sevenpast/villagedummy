@@ -1,4 +1,4 @@
--- ExpatVillage Database Schema
+-- Village Database Schema
 -- This schema stores the three critical user profile information pieces
 
 -- Enable UUID extension
