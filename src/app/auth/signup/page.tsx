@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import PostalCodeAutocomplete from '@/components/PostalCodeAutocomplete';
 
 // Country data for the dropdown
 const countries = [
@@ -391,13 +392,13 @@ export default function SignUpPage() {
                   <label htmlFor="targetPostalCode" className="block text-sm font-medium text-gray-700">
                     Postal Code
                   </label>
-                  <input
-                    id="targetPostalCode"
-                    name="targetPostalCode"
-                    type="text"
+                  <PostalCodeAutocomplete
                     value={formData.targetPostalCode}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    onChange={(value) => setFormData(prev => ({ ...prev, targetPostalCode: value }))}
+                    onCityChange={(city) => setFormData(prev => ({ ...prev, targetMunicipality: city }))}
+                    onCantonChange={(canton, cantonCode) => setFormData(prev => ({ ...prev, targetCanton: cantonCode }))}
+                    placeholder="Enter postal code or city..."
+                    className="mt-1"
                   />
                 </div>
               </div>
