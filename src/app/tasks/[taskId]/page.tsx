@@ -211,6 +211,11 @@ export default function TaskDetailPage() {
     availability: ''
   });
 
+  // AI Top Picks state
+  const [aiTopPicks, setAiTopPicks] = useState<any[]>([]);
+  const [isLoadingAi, setIsLoadingAi] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+
   useEffect(() => {
     // Initialize user data from localStorage (fallback authentication)
     const userData = localStorage.getItem('village_current_user');
@@ -223,6 +228,30 @@ export default function TaskDetailPage() {
     const foundTask = allTasks.find(t => t.id === taskId);
     setTask(foundTask);
   }, [params.taskId]);
+
+  // Load AI top picks when workflow step changes to toppicks
+  useEffect(() => {
+    if (workflowStep === 'toppicks' && currentUser?.first_name) {
+      const loadAiTopPicks = async () => {
+        setIsLoadingAi(true);
+        try {
+          const response = await fetch(`/api/housing/top-picks?userId=${currentUser.first_name}`);
+          const data = await response.json();
+          
+          if (data.success) {
+            setAiTopPicks(data.listings || []);
+            setLastUpdated(data.lastUpdated);
+          }
+        } catch (error) {
+          console.error('Error loading AI top picks:', error);
+        } finally {
+          setIsLoadingAi(false);
+        }
+      };
+      
+      loadAiTopPicks();
+    }
+  }, [workflowStep, currentUser?.first_name]);
 
   const handleBackClick = () => {
     router.push('/');
@@ -2066,7 +2095,38 @@ ${currentUser?.first_name || 'Your Name'} ${currentUser?.last_name || ''}`)}`}
           </div>
         </div>
 
-        <div className="text-center">
+        <div className="text-center space-y-3">
+          <button
+            onClick={async () => {
+              // Save user preferences for AI scraping
+              if (currentUser?.first_name) {
+                try {
+                  await fetch('/api/housing/top-picks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      userId: currentUser.first_name,
+                      preferences: {
+                        userId: currentUser.first_name,
+                        maxRent: parseInt(housingForm.budget) || 3000,
+                        minRooms: parseFloat(housingForm.size) || 2,
+                        maxRooms: parseFloat(housingForm.size) + 1 || 4,
+                        location: housingForm.location || currentUser.target_municipality || 'Zurich',
+                        postalCode: currentUser.target_postal_code || '8001',
+                        canton: currentUser.target_canton || 'ZH'
+                      }
+                    })
+                  });
+                } catch (error) {
+                  console.error('Error saving preferences:', error);
+                }
+              }
+              setWorkflowStep('toppicks');
+            }}
+            className="bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300"
+          >
+            🤖 View AI Top-Picks
+          </button>
           <button
             onClick={() => setWorkflowStep('question')}
             className="bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300"
@@ -2079,94 +2139,117 @@ ${currentUser?.first_name || 'Your Name'} ${currentUser?.last_name || ''}`)}`}
   };
 
   const renderHousingTopPicksStep = () => {
-    const topPicks = getTopPicks();
+    // Load AI-generated top picks
+    const loadAiTopPicks = async () => {
+      if (!currentUser?.first_name) return;
+      
+      setIsLoadingAi(true);
+      try {
+        const response = await fetch(`/api/housing/top-picks?userId=${currentUser.first_name}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          setAiTopPicks(data.listings || []);
+          setLastUpdated(data.lastUpdated);
+        }
+      } catch (error) {
+        console.error('Error loading AI top picks:', error);
+      } finally {
+        setIsLoadingAi(false);
+      }
+    };
 
     return (
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Today's top-picks</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Today's AI Top-Picks</h2>
         
-        {!isScraping && scrapedPicks.length === 0 && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-            <p className="text-gray-800 mb-3">Get real-time housing data from Swiss portals:</p>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-gray-800">🤖 AI-powered daily housing recommendations</p>
             <button 
-              onClick={scrapeRealHousingData}
-              className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300"
+              onClick={loadAiTopPicks}
+              disabled={isLoadingAi}
+              className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 disabled:opacity-50"
             >
-              🔍 Scrape Real Housing Data
+              {isLoadingAi ? '🔄 Loading...' : '🔄 Refresh'}
             </button>
           </div>
-        )}
+          
+          {lastUpdated && (
+            <p className="text-sm text-gray-600">
+              Last updated: {new Date(lastUpdated).toLocaleString()}
+            </p>
+          )}
+        </div>
 
-        {isScraping && (
+        {isLoadingAi && (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
             <div className="flex items-center">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-3"></div>
-              <p className="text-gray-800">Scraping real housing data from Swiss portals...</p>
+              <p className="text-gray-800">Loading AI-generated top picks...</p>
             </div>
           </div>
         )}
-
-        {scrapedPicks.length > 0 && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-            <p className="text-gray-800">✅ Found {scrapedPicks.length} real listings from Swiss portals!</p>
-          </div>
-        )}
         
-        {topPicks.length > 0 ? (
+        {aiTopPicks.length > 0 ? (
           <div className="space-y-4 mb-6">
-            {topPicks.map((pick) => (
+            {aiTopPicks.map((pick, index) => (
               <a 
-                key={pick.id} 
-                href={pick.link}
+                key={index} 
+                href={pick.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
+                className="block bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-gray-400 transition-all cursor-pointer"
               >
                 <div className="flex justify-between items-start mb-3">
-                  <div>
+                  <div className="flex-1">
                     <h3 className="font-semibold text-gray-900 mb-1">{pick.title}</h3>
-                    <p className="text-lg font-bold text-gray-800">CHF {pick.price.toLocaleString()}/month</p>
-                    <p className="text-sm text-gray-600">{pick.size} • {pick.location}</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="bg-green-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">
-                      {pick.matchScore}% match
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">{pick.availability}</p>
-                    {pick.portal && (
-                      <p className="text-xs text-gray-800 mt-1 font-medium">
-                        via {pick.portal.charAt(0).toUpperCase() + pick.portal.slice(1)}
-                      </p>
+                    <p className="text-lg font-bold text-gray-800">CHF {pick.price_chf.toLocaleString()}/month</p>
+                    <p className="text-sm text-gray-600">{pick.address}</p>
+                    {pick.living_space_sqm && (
+                      <p className="text-sm text-gray-600">{pick.living_space_sqm} m²</p>
                     )}
+                    {pick.number_of_rooms && (
+                      <p className="text-sm text-gray-600">{pick.number_of_rooms} rooms</p>
+                    )}
+                  </div>
+                  <div className="text-right ml-4">
+                    <div className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">
+                      {pick.match_score}% match
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">via {pick.source}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(pick.scraped_at).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
                 
-                <p className="text-gray-700 text-sm mb-3">{pick.description}</p>
-                
-                <div className="mb-3">
-                  <h4 className="text-sm font-medium text-gray-900 mb-2">Features:</h4>
-                  <div className="flex flex-wrap gap-1">
-                    {pick.features.map((feature: string, index: number) => (
-                      <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                        {feature}
-                      </span>
-                    ))}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <span className="mr-2">🏠</span>
+                    <span>AI-curated match</span>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Click to view on {pick.source}
                   </div>
                 </div>
               </a>
             ))}
           </div>
-        ) : (
+        ) : !isLoadingAi ? (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-            <p className="text-gray-600 mb-4">Please fill out the search form first to see personalized top picks.</p>
+            <p className="text-gray-600 mb-4">No AI top picks available yet.</p>
+            <p className="text-sm text-gray-500 mb-4">
+              AI analyzes Swiss housing portals daily to find the best matches for your preferences.
+            </p>
             <button 
               onClick={() => setWorkflowStep('search')}
               className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300"
             >
-              Back to Search Form
+              Set Your Preferences
             </button>
           </div>
-        )}
+        ) : null}
         
         <div className="text-center space-y-3">
           <button
