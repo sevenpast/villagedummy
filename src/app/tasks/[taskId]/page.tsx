@@ -191,7 +191,7 @@ export default function TaskDetailPage() {
   };
   
   // Workflow step states - each task has its own progression
-  const [workflowStep, setWorkflowStep] = useState<'intro' | 'info' | 'question' | 'search' | 'toppicks' | 'application' | 'reminder' | 'completed'>('intro');
+  const [workflowStep, setWorkflowStep] = useState<'intro' | 'info' | 'question' | 'search' | 'application' | 'reminder' | 'completed'>('intro');
   const [gemeindeWorkflowStep, setGemeindeWorkflowStep] = useState<'intro' | 'info' | 'question' | 'opening-hours' | 'email' | 'reminder' | 'completed'>('intro');
   const [schoolWorkflowStep, setSchoolWorkflowStep] = useState<'intro' | 'question' | 'research' | 'pdf-form' | 'online-portal' | 'fallback-email' | 'reminder' | 'completed'>('intro');
   const [permitWorkflowStep, setPermitWorkflowStep] = useState<'intro' | 'info' | 'question' | 'time-check' | 'email-generator' | 'reminder' | 'completed'>('intro');
@@ -211,10 +211,6 @@ export default function TaskDetailPage() {
     availability: ''
   });
 
-  // AI Top Picks state
-  const [aiTopPicks, setAiTopPicks] = useState<any[]>([]);
-  const [isLoadingAi, setIsLoadingAi] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   useEffect(() => {
     // Initialize user data from localStorage (fallback authentication)
@@ -229,29 +225,6 @@ export default function TaskDetailPage() {
     setTask(foundTask);
   }, [params.taskId]);
 
-  // Load AI top picks when workflow step changes to toppicks
-  useEffect(() => {
-    if (workflowStep === 'toppicks' && currentUser?.first_name) {
-      const loadAiTopPicks = async () => {
-        setIsLoadingAi(true);
-        try {
-          const response = await fetch(`/api/housing/top-picks?userId=${currentUser.first_name}`);
-          const data = await response.json();
-          
-          if (data.success) {
-            setAiTopPicks(data.listings || []);
-            setLastUpdated(data.lastUpdated);
-          }
-        } catch (error) {
-          console.error('Error loading AI top picks:', error);
-        } finally {
-          setIsLoadingAi(false);
-        }
-      };
-      
-      loadAiTopPicks();
-    }
-  }, [workflowStep, currentUser?.first_name]);
 
   const handleBackClick = () => {
     router.push('/');
@@ -421,9 +394,6 @@ export default function TaskDetailPage() {
     };
   };
 
-  // Real-time housing data scraping state
-  const [scrapedPicks, setScrapedPicks] = useState<any[]>([]);
-  const [isScraping, setIsScraping] = useState(false);
 
   /* 
    * Fallback housing recommendations generator
@@ -516,56 +486,6 @@ export default function TaskDetailPage() {
     return picks;
   };
 
-  /* 
-   * Real housing data scraper
-   * Fetches live listings from Swiss rental portals
-   */
-  const scrapeRealHousingData = async () => {
-    // Validate form completion before scraping
-    if (!housingForm.budget || !housingForm.size || !housingForm.location) {
-      return [];
-    }
-
-    setIsScraping(true);
-    try {
-      const response = await fetch('/api/scrape-housing', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          budget: housingForm.budget,
-          size: housingForm.size,
-          location: housingForm.location,
-          hasParking: housingForm.parking,
-          hasPets: housingForm.pets,
-          isWheelchair: housingForm.wheelchair
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setScrapedPicks(data.results || []);
-        return data.results || [];
-      } else {
-        console.error('Scraping failed:', response.statusText);
-        return generateFallbackPicks();
-      }
-    } catch (error) {
-      console.error('Scraping error:', error);
-      return generateFallbackPicks();
-    } finally {
-      setIsScraping(false);
-    }
-  };
-
-  // Get top picks (real data or fallback)
-  const getTopPicks = () => {
-    if (scrapedPicks.length > 0) {
-      return scrapedPicks;
-    }
-    return generateFallbackPicks();
-  };
 
   /* 
    * ============================================================================
@@ -1554,9 +1474,6 @@ ${currentUser?.first_name || 'Your Name'} ${currentUser?.last_name || ''}`)}`}
         case 'search':
           return renderHousingSearchStep();
 
-        case 'toppicks':
-          return renderHousingTopPicksStep();
-
         case 'application':
           return renderHousingApplicationStep();
 
@@ -2042,12 +1959,12 @@ ${currentUser?.first_name || 'Your Name'} ${currentUser?.last_name || ''}`)}`}
           {rentEstimation ? (
             <div>
               {rentEstimation.isGoodFit ? (
-                <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                  <p className="text-gray-800 font-medium">Good fit</p>
+                <div className="p-3 bg-green-50 border border-green-200 rounded">
+                  <p className="text-green-800 font-medium">Good fit</p>
                 </div>
               ) : (
-                <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                  <p className="text-gray-800 font-medium">Tight market</p>
+                <div className="p-3 bg-orange-50 border border-orange-200 rounded">
+                  <p className="text-orange-800 font-medium">Tight market</p>
                 </div>
               )}
               
@@ -2095,38 +2012,7 @@ ${currentUser?.first_name || 'Your Name'} ${currentUser?.last_name || ''}`)}`}
           </div>
         </div>
 
-        <div className="text-center space-y-3">
-          <button
-            onClick={async () => {
-              // Save user preferences for AI scraping
-              if (currentUser?.first_name) {
-                try {
-                  await fetch('/api/housing/top-picks', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      userId: currentUser.first_name,
-                      preferences: {
-                        userId: currentUser.first_name,
-                        maxRent: parseInt(housingForm.budget) || 3000,
-                        minRooms: parseFloat(housingForm.size) || 2,
-                        maxRooms: parseFloat(housingForm.size) + 1 || 4,
-                        location: housingForm.location || currentUser.target_municipality || 'Zurich',
-                        postalCode: currentUser.target_postal_code || '8001',
-                        canton: currentUser.target_canton || 'ZH'
-                      }
-                    })
-                  });
-                } catch (error) {
-                  console.error('Error saving preferences:', error);
-                }
-              }
-              setWorkflowStep('toppicks');
-            }}
-            className="bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300"
-          >
-            🤖 View AI Top-Picks
-          </button>
+        <div className="text-center">
           <button
             onClick={() => setWorkflowStep('question')}
             className="bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300"
@@ -2138,136 +2024,6 @@ ${currentUser?.first_name || 'Your Name'} ${currentUser?.last_name || ''}`)}`}
     );
   };
 
-  const renderHousingTopPicksStep = () => {
-    // Load AI-generated top picks
-    const loadAiTopPicks = async () => {
-      if (!currentUser?.first_name) return;
-      
-      setIsLoadingAi(true);
-      try {
-        const response = await fetch(`/api/housing/top-picks?userId=${currentUser.first_name}`);
-        const data = await response.json();
-        
-        if (data.success) {
-          setAiTopPicks(data.listings || []);
-          setLastUpdated(data.lastUpdated);
-        }
-      } catch (error) {
-        console.error('Error loading AI top picks:', error);
-      } finally {
-        setIsLoadingAi(false);
-      }
-    };
-
-    return (
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Today's AI Top-Picks</h2>
-        
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-gray-800">🤖 AI-powered daily housing recommendations</p>
-            <button 
-              onClick={loadAiTopPicks}
-              disabled={isLoadingAi}
-              className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 disabled:opacity-50"
-            >
-              {isLoadingAi ? '🔄 Loading...' : '🔄 Refresh'}
-            </button>
-          </div>
-          
-          {lastUpdated && (
-            <p className="text-sm text-gray-600">
-              Last updated: {new Date(lastUpdated).toLocaleString()}
-            </p>
-          )}
-        </div>
-
-        {isLoadingAi && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-3"></div>
-              <p className="text-gray-800">Loading AI-generated top picks...</p>
-            </div>
-          </div>
-        )}
-        
-        {aiTopPicks.length > 0 ? (
-          <div className="space-y-4 mb-6">
-            {aiTopPicks.map((pick, index) => (
-              <a 
-                key={index} 
-                href={pick.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-gray-400 transition-all cursor-pointer"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1">{pick.title}</h3>
-                    <p className="text-lg font-bold text-gray-800">CHF {pick.price_chf.toLocaleString()}/month</p>
-                    <p className="text-sm text-gray-600">{pick.address}</p>
-                    {pick.living_space_sqm && (
-                      <p className="text-sm text-gray-600">{pick.living_space_sqm} m²</p>
-                    )}
-                    {pick.number_of_rooms && (
-                      <p className="text-sm text-gray-600">{pick.number_of_rooms} rooms</p>
-                    )}
-                  </div>
-                  <div className="text-right ml-4">
-                    <div className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">
-                      {pick.match_score}% match
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">via {pick.source}</p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(pick.scraped_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <span className="mr-2">🏠</span>
-                    <span>AI-curated match</span>
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    Click to view on {pick.source}
-                  </div>
-                </div>
-              </a>
-            ))}
-          </div>
-        ) : !isLoadingAi ? (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-            <p className="text-gray-600 mb-4">No AI top picks available yet.</p>
-            <p className="text-sm text-gray-500 mb-4">
-              AI analyzes Swiss housing portals daily to find the best matches for your preferences.
-            </p>
-            <button 
-              onClick={() => setWorkflowStep('search')}
-              className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300"
-            >
-              Set Your Preferences
-            </button>
-          </div>
-        ) : null}
-        
-        <div className="text-center space-y-3">
-          <button
-            onClick={() => setWorkflowStep('search')}
-            className="w-full max-w-xs bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300"
-          >
-            Back to Search
-          </button>
-          <button
-            onClick={() => setWorkflowStep('question')}
-            className="w-full max-w-xs bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300"
-          >
-            Check: Have you found housing?
-          </button>
-        </div>
-      </div>
-    );
-  };
 
   const renderHousingApplicationStep = () => {
     return (
