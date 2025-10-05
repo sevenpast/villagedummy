@@ -6,7 +6,11 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, password, first_name, last_name, country_of_origin, municipality, canton, postal_code, has_kids, num_children } = body
+    const { 
+      email, password, first_name, last_name, country_of_origin, 
+      gender, nationality, birth_place, german_skills, first_language, family_language,
+      municipality, canton, postal_code, has_kids, num_children 
+    } = body
 
     // Validate required fields - only email, password and first_name are required
     if (!email || !password || !first_name) {
@@ -24,6 +28,12 @@ export async function POST(request: NextRequest) {
       first_name,
       last_name: last_name || null,
       country_of_origin: country_of_origin || '',
+      gender: gender || '',
+      nationality: nationality || '',
+      birth_place: birth_place || '',
+      german_skills: german_skills || '',
+      first_language: first_language || '',
+      family_language: family_language || '',
       municipality: municipality || '',
       canton: canton || '',
       postal_code: postal_code || '',

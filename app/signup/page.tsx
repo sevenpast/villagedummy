@@ -12,8 +12,15 @@ export default function SignUpPage() {
     name: '',
     password: '',
     countryOfOrigin: '',
+    gender: '',
+    nationality: '',
+    birthPlace: '',
+    germanSkills: '',
+    firstLanguage: '',
+    familyLanguage: '',
     hasChildren: false,
     childrenCount: 0,
+    parentRole: '',
     targetCanton: '',
     targetPostalCode: '',
     targetMunicipality: ''
@@ -93,6 +100,12 @@ export default function SignUpPage() {
           first_name: formData.name.split(' ')[0] || formData.name,
           last_name: formData.name.split(' ').slice(1).join(' ') || '',
           country_of_origin: formData.countryOfOrigin,
+          gender: formData.gender,
+          nationality: formData.nationality,
+          birth_place: formData.birthPlace,
+          german_skills: formData.germanSkills,
+          first_language: formData.firstLanguage,
+          family_language: formData.familyLanguage,
           municipality: formData.targetMunicipality,
           canton: formData.targetCanton,
           postal_code: formData.targetPostalCode,
@@ -170,6 +183,24 @@ export default function SignUpPage() {
                     className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 border-gray-300"
                     placeholder="Enter your password"
                   />
+                </div>
+                <div>
+                  <label htmlFor="gender" className="block text-sm font-medium text-gray-700">
+                    Gender *
+                  </label>
+                  <select
+                    id="gender"
+                    name="gender"
+                    required
+                    value={formData.gender}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 border-gray-300"
+                  >
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -267,6 +298,84 @@ export default function SignUpPage() {
                   className="mt-2"
                 />
               </div>
+              
+              <div className="mb-4">
+                <label htmlFor="nationality" className="block text-sm font-medium text-gray-700">
+                  Nationality
+                </label>
+                <input
+                  id="nationality"
+                  name="nationality"
+                  type="text"
+                  value={formData.nationality}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 border-gray-300"
+                  placeholder="e.g. German, French, American"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label htmlFor="birthPlace" className="block text-sm font-medium text-gray-700">
+                  Place of Birth/Citizenship
+                </label>
+                <input
+                  id="birthPlace"
+                  name="birthPlace"
+                  type="text"
+                  value={formData.birthPlace}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 border-gray-300"
+                  placeholder="e.g. Berlin, Paris, New York"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label htmlFor="germanSkills" className="block text-sm font-medium text-gray-700">
+                  German Language Skills
+                </label>
+                <select
+                  id="germanSkills"
+                  name="germanSkills"
+                  value={formData.germanSkills}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 border-gray-300"
+                >
+                  <option value="">Select German skills</option>
+                  <option value="gut">Good (gut)</option>
+                  <option value="mittel">Average (mittel)</option>
+                  <option value="keine">None (keine)</option>
+                </select>
+              </div>
+              
+              <div className="mb-4">
+                <label htmlFor="firstLanguage" className="block text-sm font-medium text-gray-700">
+                  First Language
+                </label>
+                <input
+                  id="firstLanguage"
+                  name="firstLanguage"
+                  type="text"
+                  value={formData.firstLanguage}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 border-gray-300"
+                  placeholder="e.g. English, Spanish, Arabic"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label htmlFor="familyLanguage" className="block text-sm font-medium text-gray-700">
+                  Language Spoken in Family
+                </label>
+                <input
+                  id="familyLanguage"
+                  name="familyLanguage"
+                  type="text"
+                  value={formData.familyLanguage}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 border-gray-300"
+                  placeholder="e.g. English, Spanish, Arabic"
+                />
+              </div>
               <div className="mb-4">
                 <div className="flex items-center">
                   <input
@@ -284,21 +393,39 @@ export default function SignUpPage() {
                 
                 {/* Children count input - only show when hasChildren is true */}
                 {formData.hasChildren && (
-                  <div className="mt-3 ml-6">
-                    <label htmlFor="childrenCount" className="block text-sm font-medium text-gray-700 mb-1">
-                      Number of children
-                    </label>
-                    <input
-                      id="childrenCount"
-                      name="childrenCount"
-                      type="number"
-                      min="1"
-                      max="20"
-                      value={formData.childrenCount || ''}
-                      onChange={handleInputChange}
-                      placeholder="e.g. 2"
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
+                  <div className="mt-3 ml-6 space-y-4">
+                    <div>
+                      <label htmlFor="childrenCount" className="block text-sm font-medium text-gray-700 mb-1">
+                        Number of children
+                      </label>
+                      <input
+                        id="childrenCount"
+                        name="childrenCount"
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={formData.childrenCount || ''}
+                        onChange={handleInputChange}
+                        placeholder="e.g. 2"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="parentRole" className="block text-sm font-medium text-gray-700 mb-1">
+                        Are you the father or mother?
+                      </label>
+                      <select
+                        id="parentRole"
+                        name="parentRole"
+                        value={formData.parentRole}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select role</option>
+                        <option value="father">Father</option>
+                        <option value="mother">Mother</option>
+                      </select>
+                    </div>
                   </div>
                 )}
               </div>
