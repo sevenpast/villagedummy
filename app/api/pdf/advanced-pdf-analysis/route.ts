@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     // Initialize Gemini with the correct model and stable v1 API
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
     // Load PDF and get basic information
     const arrayBuffer = await file.arrayBuffer();

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import AdvancedPDFOverlay from '../../components/AdvancedPDFOverlay';
+import SimplePDFOverlay from '../../components/SimplePDFOverlay';
 
 export default function AdvancedPDFOverlayPage() {
   const handleAnalysisComplete = (result: any) => {
@@ -26,7 +26,7 @@ export default function AdvancedPDFOverlayPage() {
           </p>
         </div>
 
-        <AdvancedPDFOverlay
+        <SimplePDFOverlay
           onAnalysisComplete={handleAnalysisComplete}
           onFormSubmit={handleFormSubmit}
         />

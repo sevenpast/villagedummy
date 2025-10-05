@@ -517,7 +517,14 @@ export default function AdvancedPDFOverlay({ onAnalysisComplete, onFormSubmit }:
               >
                 {/* PDF Canvas */}
                 <div style={{ position: 'relative' }}>
-                  {page.canvas}
+                  <div 
+                    ref={(el) => {
+                      if (el && page.canvas) {
+                        el.innerHTML = '';
+                        el.appendChild(page.canvas);
+                      }
+                    }}
+                  />
                   
                   {/* Overlay Elements */}
                   {renderOverlayElements(page.pageNumber)}
