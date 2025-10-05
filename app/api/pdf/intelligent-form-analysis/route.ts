@@ -3,17 +3,25 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🧠 Intelligent Form Analysis API called');
+    
     const formData = await request.formData();
     const file = formData.get('pdf') as File;
     
     if (!file) {
+      console.error('❌ No file provided');
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    console.log(`📄 Processing file: ${file.name} (${file.size} bytes, ${file.type})`);
+
+    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     if (!apiKey) {
+      console.error('❌ Gemini API key not configured');
       return NextResponse.json({ error: 'Gemini API key not configured' }, { status: 500 });
     }
+
+    console.log('✅ Gemini API key found');
 
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -73,6 +81,8 @@ Antworte NUR mit einem sauberen JSON-Objekt in folgendem Format:
 Analysiere das Dokument jetzt:
 `;
 
+    console.log('🤖 Calling Gemini API...');
+    
     const result = await model.generateContent([
       prompt,
       {
@@ -83,20 +93,28 @@ Analysiere das Dokument jetzt:
       }
     ]);
 
+    console.log('✅ Gemini API response received');
+    
     const response = await result.response;
     const text = response.text();
+    
+    console.log(`📝 Gemini response length: ${text.length} characters`);
 
     // Parse JSON response
     let analysisResult;
     try {
       // Clean the response text (remove markdown formatting if present)
       const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      console.log('🧹 Cleaned response text for parsing');
       analysisResult = JSON.parse(cleanText);
+      console.log('✅ Successfully parsed JSON response');
     } catch (parseError) {
-      console.error('Failed to parse Gemini response:', parseError);
+      console.error('❌ Failed to parse Gemini response:', parseError);
+      console.error('Raw response:', text);
       return NextResponse.json({ 
         error: 'Failed to parse AI analysis response',
-        rawResponse: text 
+        rawResponse: text,
+        parseError: parseError instanceof Error ? parseError.message : 'Unknown parse error'
       }, { status: 500 });
     }
 
@@ -107,10 +125,19 @@ Analysiere das Dokument jetzt:
     });
 
   } catch (error) {
-    console.error('Intelligent form analysis error:', error);
+    console.error('❌ Intelligent form analysis error:', error);
+    
+    // More detailed error logging
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    
     return NextResponse.json({ 
       error: 'Failed to analyze form',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
+      errorType: error instanceof Error ? error.name : 'UnknownError'
     }, { status: 500 });
   }
 }

@@ -43,7 +43,7 @@ export default function IntelligentFormBuilder() {
       const formData = new FormData();
       formData.append('pdf', file);
 
-      const response = await fetch('/api/pdf/intelligent-form-analysis', {
+      const response = await fetch('/api/pdf/simple-intelligent-analysis', {
         method: 'POST',
         body: formData,
       });
