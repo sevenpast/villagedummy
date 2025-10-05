@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Successfully filled ${filledFieldsCount} out of ${pdfFields.length} PDF fields`);
 
-    return new NextResponse(filledPdfBytes, {
+    return new NextResponse(filledPdfBytes as any, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
