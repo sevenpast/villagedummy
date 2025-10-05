@@ -5,6 +5,7 @@ import React, { useState, useRef, useEffect } from 'react';
 interface PDFElement {
   elementType: 'input_field' | 'text_block';
   pageNumber: number;
+  field_name: string;
   original_text: string | null;
   translated_text: string;
   position: { x: number; y: number };
@@ -87,6 +88,7 @@ export default function TruePDFOverlay({ onAnalysisComplete, onFormSubmit }: Tru
           elements: result.fields.map((field: any) => ({
             elementType: 'input_field',
             pageNumber: 1,
+            field_name: field.fieldName,
             original_text: field.originalLabel,
             translated_text: field.translatedLabel,
             position: field.position,
@@ -96,6 +98,7 @@ export default function TruePDFOverlay({ onAnalysisComplete, onFormSubmit }: Tru
           inputFields: result.fields.map((field: any) => ({
             elementType: 'input_field',
             pageNumber: 1,
+            field_name: field.fieldName,
             original_text: field.originalLabel,
             translated_text: field.translatedLabel,
             position: field.position,
@@ -113,12 +116,11 @@ export default function TruePDFOverlay({ onAnalysisComplete, onFormSubmit }: Tru
         
         setAnalysisResult(convertedResult);
         
-        // Initialize form data with empty values
+        // Initialize form data with empty values using the unique fieldName
         const initialData: Record<string, any> = {};
         result.fields.forEach((field: any) => {
-          if (field.originalLabel) {
-            const fieldKey = field.originalLabel.replace(/[^a-zA-Z0-9]/g, '');
-            initialData[fieldKey] = '';
+          if (field.fieldName) {
+            initialData[field.fieldName] = '';
           }
         });
         setFormData(initialData);
@@ -275,9 +277,9 @@ export default function TruePDFOverlay({ onAnalysisComplete, onFormSubmit }: Tru
     );
 
     return pageElements.map((element: PDFElement, index: number) => {
-      if (element.elementType !== 'input_field' || !element.original_text) return null;
+      if (element.elementType !== 'input_field' || !element.field_name) return null;
 
-      const fieldKey = element.original_text.replace(/[^a-zA-Z0-9]/g, '');
+      const fieldKey = element.field_name;
       
       // Convert PDF coordinates to screen coordinates
       // Assuming PDF is displayed at scale and positioned within the container

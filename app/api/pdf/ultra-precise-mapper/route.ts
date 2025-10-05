@@ -267,6 +267,40 @@ export async function POST(request: NextRequest) {
         context: 'Special Needs',
         position: { x: 250, y: 980 },
         size: { width: 100, height: 20 }
+      },
+      
+      // === FIXES FOR PERSISTENTLY MIS-MAPPED FIELDS ===
+      'Male FemaleNationality': {
+        name: 'childNationality',
+        label: 'Nationality',
+        type: 'text',
+        context: 'Child Personal Info',
+        position: { x: 100, y: 300 },
+        size: { width: 120, height: 20 }
+      },
+      'Since': {
+        name: 'germanSince',
+        label: 'German Since',
+        type: 'date',
+        context: 'Language Info',
+        position: { x: 100, y: 400 },
+        size: { width: 100, height: 20 }
+      },
+      'Since_2': {
+        name: 'familyLanguage',
+        label: 'Language in Family',
+        type: 'text',
+        context: 'Language Info',
+        position: { x: 100, y: 350 },
+        size: { width: 150, height: 20 }
+      },
+      'Since_3': {
+        name: 'childLivesWith',
+        label: 'Child Lives With',
+        type: 'radio',
+        context: 'Child Personal Info',
+        position: { x: 100, y: 270 },
+        size: { width: 200, height: 20 }
       }
     };
 
