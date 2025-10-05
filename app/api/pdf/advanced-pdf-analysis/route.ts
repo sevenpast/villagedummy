@@ -149,7 +149,9 @@ export async function POST(request: NextRequest) {
       }
     ]);
 
-    const response = await result.response;
+    console.log('Gemini raw result:', JSON.stringify(result, null, 2));
+
+    const response = result.response;
     const text = response.text();
     
     console.log('✅ Gemini analysis successful');
@@ -204,6 +206,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ Advanced PDF analysis failed:', error);
     
+    // Log the full error object for more details
+    console.error('Full error object:', JSON.stringify(error, null, 2));
+
     let errorMessage = 'An unknown error occurred';
     if (error instanceof Error) {
         errorMessage = error.message;

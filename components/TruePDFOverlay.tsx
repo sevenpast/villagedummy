@@ -76,8 +76,15 @@ export default function TruePDFOverlay({ onAnalysisComplete, onFormSubmit }: Tru
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Analysis failed with status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({ 
+          error: 'Failed to parse error response from server.', 
+          details: `Status code: ${response.status}`
+        }));
+        const detail = errorData.details || `Status: ${response.status}`;
+        const message = `${errorData.error || 'Analysis failed'}. Details: ${detail}`;
+        console.error("Analysis API Error:", message);
+        setError(message); // Set state to display error in UI
+        return; // Stop execution
       }
 
       const result = await response.json();
