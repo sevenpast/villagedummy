@@ -218,8 +218,8 @@ ${extractedText}
           formTitle: formAnalysis.formTitle,
           fields: processedFields,
           totalFields: processedFields.length,
-          geminiMatchedFields: processedFields.filter(f => f.geminiMatched).length,
-          coordinateMatchedFields: processedFields.filter(f => f.coordinateMatched).length,
+          geminiMatchedFields: processedFields.filter((f: any) => f.geminiMatched).length,
+          coordinateMatchedFields: processedFields.filter((f: any) => f.coordinateMatched).length,
           pdfData: base64,
           textBlocks: allTextBlocks // Include for debugging
         }
@@ -229,22 +229,22 @@ ${extractedText}
       console.error('❌ Gemini AI error:', geminiError);
       return NextResponse.json({
         success: false,
-        error: `Gemini AI analysis failed: ${geminiError.message}`,
-        details: geminiError.message
+        error: `Gemini AI analysis failed: ${geminiError instanceof Error ? geminiError.message : String(geminiError)}`,
+        details: geminiError instanceof Error ? geminiError.message : String(geminiError)
       }, { status: 500 });
     }
 
   } catch (error) {
     console.error('Error processing PDF form:', error);
     console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : 'Unknown'
     });
     return NextResponse.json({
       success: false,
-      error: `Error processing PDF form: ${error.message}`,
-      details: error.message
+      error: `Error processing PDF form: ${error instanceof Error ? error.message : String(error)}`,
+      details: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
 }
