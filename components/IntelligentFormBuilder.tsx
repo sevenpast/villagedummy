@@ -11,7 +11,7 @@ interface FormField {
   position: { x: number; y: number };
   size: { width: number; height: number };
   required: boolean;
-  options: string[];
+  options: (string | { original: string; translated: string })[];
   validation: string;
   placeholder: string;
 }
@@ -290,8 +290,8 @@ export default function IntelligentFormBuilder() {
           >
             <option value="">Select an option</option>
             {field.options.map((option, index) => (
-              <option key={index} value={option}>
-                {option}
+              <option key={index} value={typeof option === 'string' ? option : option.original}>
+                {typeof option === 'string' ? option : option.translated}
               </option>
             ))}
           </select>
