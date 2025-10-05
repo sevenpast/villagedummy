@@ -69,7 +69,7 @@ export default function TruePDFOverlay({ onAnalysisComplete, onFormSubmit }: Tru
       formData.append('pdf', file);
 
       console.log('🔍 Starting PDF analysis...');
-      const response = await fetch('/api/pdf/precise-field-mapper', {
+      const response = await fetch('/api/pdf/ultra-precise-mapper', {
         method: 'POST',
         body: formData,
       });
@@ -285,10 +285,15 @@ export default function TruePDFOverlay({ onAnalysisComplete, onFormSubmit }: Tru
       const containerHeight = pdfContainerRef.current?.offsetHeight || 600;
       
       // Calculate relative position based on PDF dimensions
-      const relativeX = (element.position.x / analysisResult.pdfDimensions.width) * containerWidth * pdfScale;
-      const relativeY = (element.position.y / analysisResult.pdfDimensions.height) * containerHeight * pdfScale;
-      const relativeWidth = (element.size.width / analysisResult.pdfDimensions.width) * containerWidth * pdfScale;
-      const relativeHeight = (element.size.height / analysisResult.pdfDimensions.height) * containerHeight * pdfScale;
+      // Use a more accurate scaling factor
+      const scaleX = containerWidth / analysisResult.pdfDimensions.width;
+      const scaleY = containerHeight / analysisResult.pdfDimensions.height;
+      const scale = Math.min(scaleX, scaleY) * pdfScale;
+      
+      const relativeX = element.position.x * scale;
+      const relativeY = element.position.y * scale;
+      const relativeWidth = element.size.width * scale;
+      const relativeHeight = element.size.height * scale;
 
       const style: React.CSSProperties = {
         position: 'absolute',

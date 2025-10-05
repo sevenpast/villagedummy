@@ -65,7 +65,7 @@ export default function SimplePDFOverlay({ onAnalysisComplete, onFormSubmit }: S
       formData.append('pdf', file);
 
       console.log('🔍 Starting PDF analysis...');
-      const response = await fetch('/api/pdf/enhanced-field-mapper', {
+      const response = await fetch('/api/pdf/precise-field-mapper', {
         method: 'POST',
         body: formData,
       });

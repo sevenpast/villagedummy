@@ -47,7 +47,7 @@ export default function IntelligentFormBuilder() {
       console.log('📤 Uploading file for Gemini Vision analysis...');
       
       // Try enhanced field mapping first (new, improved, strict rules)
-      let response = await fetch('/api/pdf/enhanced-field-mapper', {
+      let response = await fetch('/api/pdf/precise-field-mapper', {
         method: 'POST',
         body: formData,
       });

@@ -3,7 +3,7 @@ import { PDFDocument } from 'pdf-lib';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🎯 Precise Field Mapper API called');
+    console.log('🎯 Ultra Precise Field Mapper API called');
     
     const formData = await request.formData();
     const file = formData.get('pdf') as File;
@@ -29,9 +29,9 @@ export async function POST(request: NextRequest) {
     
     console.log(`📋 Found ${fields.length} technical form fields`);
 
-    // PRECISE field mapping for Swiss kindergarten/school forms
-    const preciseFieldMappings: { [key: string]: any } = {
-      // === CHILD PERSONAL INFORMATION ===
+    // Ultra precise field mapping based on actual Swiss kindergarten form structure
+    const ultraPreciseMappings: { [key: string]: any } = {
+      // === CHILD PERSONAL INFORMATION (EXACT MATCHES) ===
       'Name': { 
         name: 'childLastName', 
         label: 'Last Name', 
@@ -59,15 +59,6 @@ export async function POST(request: NextRequest) {
         position: { x: 400, y: 200 },
         size: { width: 100, height: 20 }
       },
-      'Geschlecht': { 
-        name: 'childGender', 
-        label: 'Gender', 
-        type: 'radio', 
-        required: true, 
-        context: 'Child Personal Info',
-        position: { x: 100, y: 250 },
-        size: { width: 200, height: 20 }
-      },
       'männlich': { 
         name: 'childGenderMale', 
         label: 'Male', 
@@ -84,13 +75,12 @@ export async function POST(request: NextRequest) {
         position: { x: 200, y: 250 },
         size: { width: 15, height: 15 }
       },
-      'Staatsangehörigkeit': { 
-        name: 'childNationality', 
-        label: 'Nationality', 
+      'Bürgerort': { 
+        name: 'childBirthPlace', 
+        label: 'Place of Birth', 
         type: 'text', 
-        required: true, 
         context: 'Child Personal Info',
-        position: { x: 100, y: 300 },
+        position: { x: 250, y: 300 },
         size: { width: 120, height: 20 }
       },
       'Nationalität': { 
@@ -102,186 +92,110 @@ export async function POST(request: NextRequest) {
         position: { x: 100, y: 300 },
         size: { width: 120, height: 20 }
       },
-      'Geburtsort': { 
-        name: 'childBirthPlace', 
-        label: 'Place of Birth', 
-        type: 'text', 
-        context: 'Child Personal Info',
-        position: { x: 250, y: 300 },
-        size: { width: 120, height: 20 }
-      },
-      'Bürgerort': { 
-        name: 'childBirthPlace', 
-        label: 'Place of Birth', 
-        type: 'text', 
-        context: 'Child Personal Info',
-        position: { x: 250, y: 300 },
-        size: { width: 120, height: 20 }
-      },
-      
-      // === LANGUAGE INFORMATION ===
-      'Umgangssprache in der Familie': { 
-        name: 'familyLanguage', 
-        label: 'Language Spoken in Family', 
-        type: 'text', 
-        required: true, 
-        context: 'Language Info',
-        position: { x: 100, y: 350 },
-        size: { width: 200, height: 20 }
-      },
-      'Deutschkenntnisse': { 
-        name: 'germanSkills', 
-        label: 'German Language Skills', 
-        type: 'text', 
-        context: 'Language Info',
-        position: { x: 100, y: 400 },
-        size: { width: 200, height: 20 }
-      },
-      'Muttersprache': { 
-        name: 'motherTongue', 
-        label: 'Mother Tongue', 
-        type: 'text', 
-        context: 'Language Info',
-        position: { x: 100, y: 450 },
-        size: { width: 150, height: 20 }
-      },
       'Erstsprache': { 
         name: 'firstLanguage', 
         label: 'First Language', 
         type: 'text', 
         context: 'Language Info',
-        position: { x: 100, y: 450 },
+        position: { x: 100, y: 350 },
         size: { width: 150, height: 20 }
       },
       
       // === FATHER INFORMATION ===
-      'Name_2': { 
-        name: 'fatherLastName', 
-        label: 'Father Last Name', 
-        type: 'text', 
-        required: true, 
-        context: 'Father Info',
-        position: { x: 100, y: 500 },
-        size: { width: 120, height: 20 }
-      },
       'Vorname_2': { 
         name: 'fatherFirstName', 
         label: 'Father First Name', 
         type: 'text', 
         required: true, 
         context: 'Father Info',
+        position: { x: 100, y: 500 },
+        size: { width: 120, height: 20 }
+      },
+      'Name_2': { 
+        name: 'fatherLastName', 
+        label: 'Father Last Name', 
+        type: 'text', 
+        required: true, 
+        context: 'Father Info',
         position: { x: 250, y: 500 },
         size: { width: 120, height: 20 }
       },
-      'Geburtsdatum_2': { 
-        name: 'fatherBirthDate', 
-        label: 'Father Date of Birth', 
-        type: 'date', 
-        context: 'Father Info',
-        position: { x: 400, y: 500 },
-        size: { width: 100, height: 20 }
-      },
-      'Staatsangehörigkeit_2': { 
-        name: 'fatherNationality', 
-        label: 'Father Nationality', 
+      'Adresse': { 
+        name: 'fatherAddress', 
+        label: 'Father Address', 
         type: 'text', 
         context: 'Father Info',
         position: { x: 100, y: 550 },
+        size: { width: 200, height: 20 }
+      },
+      'Mobile': { 
+        name: 'fatherMobile', 
+        label: 'Father Mobile', 
+        type: 'tel', 
+        context: 'Father Info',
+        position: { x: 100, y: 580 },
         size: { width: 120, height: 20 }
       },
-      'Nationalität_2': { 
-        name: 'fatherNationality', 
-        label: 'Father Nationality', 
-        type: 'text', 
+      'EMail': { 
+        name: 'fatherEmail', 
+        label: 'Father Email', 
+        type: 'email', 
         context: 'Father Info',
-        position: { x: 100, y: 550 },
-        size: { width: 120, height: 20 }
-      },
-      'Beruf': { 
-        name: 'fatherProfession', 
-        label: 'Father Profession', 
-        type: 'text', 
-        context: 'Father Info',
-        position: { x: 250, y: 550 },
-        size: { width: 150, height: 20 }
+        position: { x: 250, y: 580 },
+        size: { width: 200, height: 20 }
       },
       
       // === MOTHER INFORMATION ===
-      'Name_3': { 
-        name: 'motherLastName', 
-        label: 'Mother Last Name', 
-        type: 'text', 
-        required: true, 
-        context: 'Mother Info',
-        position: { x: 100, y: 600 },
-        size: { width: 120, height: 20 }
-      },
       'Vorname_3': { 
         name: 'motherFirstName', 
         label: 'Mother First Name', 
         type: 'text', 
         required: true, 
         context: 'Mother Info',
-        position: { x: 250, y: 600 },
-        size: { width: 120, height: 20 }
-      },
-      'Geburtsdatum_3': { 
-        name: 'motherBirthDate', 
-        label: 'Mother Date of Birth', 
-        type: 'date', 
-        context: 'Mother Info',
-        position: { x: 400, y: 600 },
-        size: { width: 100, height: 20 }
-      },
-      'Staatsangehörigkeit_3': { 
-        name: 'motherNationality', 
-        label: 'Mother Nationality', 
-        type: 'text', 
-        context: 'Mother Info',
         position: { x: 100, y: 650 },
         size: { width: 120, height: 20 }
       },
-      'Nationalität_3': { 
-        name: 'motherNationality', 
-        label: 'Mother Nationality', 
-        type: 'text', 
-        context: 'Mother Info',
-        position: { x: 100, y: 650 },
-        size: { width: 120, height: 20 }
-      },
-      'Beruf_2': { 
-        name: 'motherProfession', 
-        label: 'Mother Profession', 
-        type: 'text', 
-        context: 'Mother Info',
-        position: { x: 250, y: 650 },
-        size: { width: 150, height: 20 }
-      },
-      
-      // === ADDRESS INFORMATION ===
-      'Adresse': { 
-        name: 'address', 
-        label: 'Address', 
+      'Name_3': { 
+        name: 'motherLastName', 
+        label: 'Mother Last Name', 
         type: 'text', 
         required: true, 
-        context: 'Address Info',
+        context: 'Mother Info',
+        position: { x: 250, y: 650 },
+        size: { width: 120, height: 20 }
+      },
+      'Adresse_2': { 
+        name: 'motherAddress', 
+        label: 'Mother Address', 
+        type: 'text', 
+        context: 'Mother Info',
         position: { x: 100, y: 700 },
         size: { width: 200, height: 20 }
       },
-      'Adresse_2': { 
-        name: 'addressLine2', 
-        label: 'Address Line 2', 
-        type: 'text', 
-        context: 'Address Info',
+      'Mobile_2': { 
+        name: 'motherMobile', 
+        label: 'Mother Mobile', 
+        type: 'tel', 
+        context: 'Mother Info',
         position: { x: 100, y: 730 },
+        size: { width: 120, height: 20 }
+      },
+      'EMail_2': { 
+        name: 'motherEmail', 
+        label: 'Mother Email', 
+        type: 'email', 
+        context: 'Mother Info',
+        position: { x: 250, y: 730 },
         size: { width: 200, height: 20 }
       },
+      
+      // === ADDRESS INFORMATION ===
       'Strasse bisher': { 
         name: 'previousStreet', 
         label: 'Previous Street', 
         type: 'text', 
         context: 'Address Info',
-        position: { x: 100, y: 760 },
+        position: { x: 100, y: 800 },
         size: { width: 200, height: 20 }
       },
       'Ort  Land bisher': { 
@@ -289,155 +203,61 @@ export async function POST(request: NextRequest) {
         label: 'Previous City/Country', 
         type: 'text', 
         context: 'Address Info',
-        position: { x: 100, y: 790 },
+        position: { x: 100, y: 830 },
         size: { width: 200, height: 20 }
       },
       
       // === CONTACT INFORMATION ===
-      'Mobile': { 
-        name: 'mobilePhone', 
-        label: 'Mobile Phone', 
-        type: 'tel', 
-        validation: 'tel', 
-        context: 'Contact Info',
-        position: { x: 100, y: 820 },
-        size: { width: 120, height: 20 }
-      },
-      'Mobile_2': { 
-        name: 'mobilePhone2', 
-        label: 'Mobile Phone 2', 
-        type: 'tel', 
-        validation: 'tel', 
-        context: 'Contact Info',
-        position: { x: 250, y: 820 },
-        size: { width: 120, height: 20 }
-      },
-      'EMail': { 
-        name: 'email', 
-        label: 'Email', 
-        type: 'email', 
-        validation: 'email', 
-        context: 'Contact Info',
-        position: { x: 100, y: 850 },
-        size: { width: 200, height: 20 }
-      },
-      'EMail_2': { 
-        name: 'email2', 
-        label: 'Email 2', 
-        type: 'email', 
-        validation: 'email', 
-        context: 'Contact Info',
-        position: { x: 100, y: 880 },
-        size: { width: 200, height: 20 }
-      },
       'Telefonnummer': { 
-        name: 'phone', 
+        name: 'phoneNumber', 
         label: 'Phone Number', 
         type: 'tel', 
-        validation: 'tel', 
         context: 'Contact Info',
-        position: { x: 100, y: 910 },
+        position: { x: 100, y: 860 },
         size: { width: 120, height: 20 }
       },
       'EMailAdresse': { 
         name: 'emailAddress', 
         label: 'Email Address', 
         type: 'email', 
-        validation: 'email', 
         context: 'Contact Info',
-        position: { x: 100, y: 940 },
+        position: { x: 250, y: 860 },
         size: { width: 200, height: 20 }
       },
       
       // === THERAPY AND SUPPORT SERVICES ===
-      'Logopädie': { 
-        name: 'speechTherapy', 
-        label: 'Speech Therapy', 
-        type: 'checkbox', 
-        context: 'Therapy Services',
-        position: { x: 100, y: 1000 },
-        size: { width: 15, height: 15 }
-      },
-      'Psychomotorik': { 
-        name: 'psychomotorTherapy', 
-        label: 'Psychomotor Therapy', 
-        type: 'checkbox', 
-        context: 'Therapy Services',
-        position: { x: 200, y: 1000 },
-        size: { width: 15, height: 15 }
-      },
-      'DaZ-Unterricht': { 
-        name: 'germanAsSecondLanguage', 
-        label: 'German as Second Language', 
-        type: 'checkbox', 
-        context: 'Therapy Services',
-        position: { x: 300, y: 1000 },
-        size: { width: 15, height: 15 }
-      },
-      'Integrative Förderung': { 
-        name: 'integrativeSupport', 
-        label: 'Integrative Support', 
-        type: 'checkbox', 
-        context: 'Therapy Services',
-        position: { x: 100, y: 1030 },
-        size: { width: 15, height: 15 }
-      },
-      'Begabtenförderung': { 
-        name: 'giftedSupport', 
-        label: 'Gifted Support', 
-        type: 'checkbox', 
-        context: 'Therapy Services',
-        position: { x: 200, y: 1030 },
-        size: { width: 15, height: 15 }
-      },
-      'Sonderschulung': { 
-        name: 'specialEducation', 
-        label: 'Special Education', 
-        type: 'checkbox', 
-        context: 'Therapy Services',
-        position: { x: 300, y: 1030 },
-        size: { width: 15, height: 15 }
-      },
       'andere Therapien': { 
         name: 'otherTherapies', 
         label: 'Other Therapies', 
         type: 'text', 
         context: 'Therapy Services',
-        position: { x: 100, y: 1060 },
+        position: { x: 100, y: 900 },
         size: { width: 200, height: 20 }
       },
       
       // === SPECIAL NEEDS AND SUPPORT ===
-      'Nachteilsausgleich': { 
-        name: 'disadvantageCompensation', 
-        label: 'Disadvantage Compensation', 
-        type: 'checkbox', 
+      'IF Bereiche': { 
+        name: 'ifAreas', 
+        label: 'IF Areas', 
+        type: 'text', 
         context: 'Special Needs',
-        position: { x: 100, y: 1100 },
-        size: { width: 15, height: 15 }
+        position: { x: 100, y: 950 },
+        size: { width: 150, height: 20 }
       },
       'Lernzielbefreiung': { 
         name: 'learningObjectiveExemption', 
         label: 'Learning Objective Exemption', 
-        type: 'checkbox', 
+        type: 'text', 
         context: 'Special Needs',
-        position: { x: 200, y: 1100 },
-        size: { width: 15, height: 15 }
+        position: { x: 250, y: 950 },
+        size: { width: 150, height: 20 }
       },
       'ISR Bereich': { 
         name: 'isrArea', 
         label: 'ISR Area', 
         type: 'text', 
         context: 'Special Needs',
-        position: { x: 100, y: 1130 },
-        size: { width: 150, height: 20 }
-      },
-      'IF Bereiche': { 
-        name: 'ifAreas', 
-        label: 'IF Areas', 
-        type: 'text', 
-        context: 'Special Needs',
-        position: { x: 250, y: 1130 },
+        position: { x: 100, y: 980 },
         size: { width: 150, height: 20 }
       },
       'SSA': { 
@@ -445,138 +265,13 @@ export async function POST(request: NextRequest) {
         label: 'SSA', 
         type: 'text', 
         context: 'Special Needs',
-        position: { x: 100, y: 1160 },
+        position: { x: 250, y: 980 },
         size: { width: 100, height: 20 }
-      },
-      
-      // === ADDITIONAL MISSING FIELDS ===
-      'Geschlecht': { 
-        name: 'childGender', 
-        label: 'Gender', 
-        type: 'radio', 
-        required: true, 
-        context: 'Child Personal Info',
-        position: { x: 100, y: 250 },
-        size: { width: 200, height: 20 }
-      },
-      'Staatsangehörigkeit': { 
-        name: 'childNationality', 
-        label: 'Nationality', 
-        type: 'text', 
-        required: true, 
-        context: 'Child Personal Info',
-        position: { x: 100, y: 300 },
-        size: { width: 120, height: 20 }
-      },
-      'Geburtsdatum_2': { 
-        name: 'fatherBirthDate', 
-        label: 'Father Date of Birth', 
-        type: 'date', 
-        context: 'Father Info',
-        position: { x: 400, y: 500 },
-        size: { width: 100, height: 20 }
-      },
-      'Geburtsdatum_3': { 
-        name: 'motherBirthDate', 
-        label: 'Mother Date of Birth', 
-        type: 'date', 
-        context: 'Mother Info',
-        position: { x: 400, y: 600 },
-        size: { width: 100, height: 20 }
-      },
-      'Umgangssprache in der Familie': { 
-        name: 'familyLanguage', 
-        label: 'Language Spoken in Family', 
-        type: 'text', 
-        required: true, 
-        context: 'Language Info',
-        position: { x: 100, y: 350 },
-        size: { width: 200, height: 20 }
-      },
-      'Deutschkenntnisse': { 
-        name: 'germanSkills', 
-        label: 'German Language Skills', 
-        type: 'text', 
-        context: 'Language Info',
-        position: { x: 100, y: 400 },
-        size: { width: 200, height: 20 }
-      },
-      'Muttersprache': { 
-        name: 'motherTongue', 
-        label: 'Mother Tongue', 
-        type: 'text', 
-        context: 'Language Info',
-        position: { x: 100, y: 450 },
-        size: { width: 150, height: 20 }
-      },
-      'Logopädie': { 
-        name: 'speechTherapy', 
-        label: 'Speech Therapy', 
-        type: 'checkbox', 
-        context: 'Therapy Services',
-        position: { x: 100, y: 1000 },
-        size: { width: 15, height: 15 }
-      },
-      'Psychomotorik': { 
-        name: 'psychomotorTherapy', 
-        label: 'Psychomotor Therapy', 
-        type: 'checkbox', 
-        context: 'Therapy Services',
-        position: { x: 200, y: 1000 },
-        size: { width: 15, height: 15 }
-      },
-      'DaZ-Unterricht': { 
-        name: 'germanAsSecondLanguage', 
-        label: 'German as Second Language', 
-        type: 'checkbox', 
-        context: 'Therapy Services',
-        position: { x: 300, y: 1000 },
-        size: { width: 15, height: 15 }
-      },
-      'Integrative Förderung': { 
-        name: 'integrativeSupport', 
-        label: 'Integrative Support', 
-        type: 'checkbox', 
-        context: 'Therapy Services',
-        position: { x: 100, y: 1030 },
-        size: { width: 15, height: 15 }
-      },
-      'Begabtenförderung': { 
-        name: 'giftedSupport', 
-        label: 'Gifted Support', 
-        type: 'checkbox', 
-        context: 'Therapy Services',
-        position: { x: 200, y: 1030 },
-        size: { width: 15, height: 15 }
-      },
-      'Sonderschulung': { 
-        name: 'specialEducation', 
-        label: 'Special Education', 
-        type: 'checkbox', 
-        context: 'Therapy Services',
-        position: { x: 300, y: 1030 },
-        size: { width: 15, height: 15 }
-      },
-      'Nachteilsausgleich': { 
-        name: 'disadvantageCompensation', 
-        label: 'Disadvantage Compensation', 
-        type: 'checkbox', 
-        context: 'Special Needs',
-        position: { x: 100, y: 1100 },
-        size: { width: 15, height: 15 }
-      },
-      'Lernzielbefreiung': { 
-        name: 'learningObjectiveExemption', 
-        label: 'Learning Objective Exemption', 
-        type: 'checkbox', 
-        context: 'Special Needs',
-        position: { x: 200, y: 1100 },
-        size: { width: 15, height: 15 }
       }
     };
 
-    // Process fields with precise mapping
-    const preciseFields = fields
+    // Process fields with ultra precise mapping
+    const ultraPreciseFields = fields
       .map((field, index) => {
         const fieldName = field.getName();
         const fieldType = field.constructor.name;
@@ -586,12 +281,6 @@ export async function POST(request: NextRequest) {
             fieldName === '1' || fieldName === '2' || fieldName === '1_2' || 
             fieldName === '2_2' || fieldName === '3' || fieldName === '3_2') {
           console.log(`🚫 Skipping field: ${fieldName} (decorative element)`);
-          return null;
-        }
-        
-        // Skip undefined fields without clear context (but keep checkboxes for mapping)
-        if (fieldName.startsWith('undefined') && !fieldType.includes('CheckBox')) {
-          console.log(`🚫 Skipping field: ${fieldName} (undefined without context)`);
           return null;
         }
         
@@ -605,7 +294,7 @@ export async function POST(request: NextRequest) {
           mappedFieldType = 'select';
         }
         
-        // Apply precise field mapping
+        // Apply ultra precise field mapping
         let intelligentFieldName = fieldName;
         let originalLabel = fieldName;
         let translatedLabel = fieldName;
@@ -616,8 +305,8 @@ export async function POST(request: NextRequest) {
         let position = { x: 100 + (index % 3) * 200, y: 100 + Math.floor(index / 3) * 50 };
         let size = { width: 150, height: 25 };
         
-        if (preciseFieldMappings[fieldName]) {
-          const mapping = preciseFieldMappings[fieldName];
+        if (ultraPreciseMappings[fieldName]) {
+          const mapping = ultraPreciseMappings[fieldName];
           intelligentFieldName = mapping.name;
           originalLabel = fieldName;
           translatedLabel = mapping.label;
@@ -629,7 +318,7 @@ export async function POST(request: NextRequest) {
           position = mapping.position || position;
           size = mapping.size || size;
           
-          console.log(`✅ Mapped: ${fieldName} → ${mapping.label} (${mapping.context})`);
+          console.log(`✅ Ultra precise mapped: ${fieldName} → ${mapping.label} (${mapping.context})`);
         } else {
           // Handle undefined checkboxes with intelligent context detection
           if (fieldName.startsWith('undefined') && fieldType.includes('CheckBox')) {
@@ -683,18 +372,6 @@ export async function POST(request: NextRequest) {
               checkboxIndex = index;
             }
             
-            // Adjust index based on actual form layout
-            if (checkboxIndex >= 0 && checkboxIndex < 10) {
-              // First 10 checkboxes are likely therapy/support services
-              checkboxIndex = checkboxIndex;
-            } else if (checkboxIndex >= 10 && checkboxIndex < 20) {
-              // Next 10 are additional therapies
-              checkboxIndex = checkboxIndex + 10;
-            } else {
-              // Rest are additional support services
-              checkboxIndex = Math.min(checkboxIndex, checkboxMappings.length - 1);
-            }
-            
             if (checkboxIndex >= 0 && checkboxIndex < checkboxMappings.length) {
               const mapping = checkboxMappings[checkboxIndex];
               intelligentFieldName = mapping.name;
@@ -713,7 +390,7 @@ export async function POST(request: NextRequest) {
               };
               size = { width: 15, height: 15 };
               
-              console.log(`✅ Mapped undefined checkbox: ${fieldName} → ${mapping.label} (${mapping.context})`);
+              console.log(`✅ Ultra precise mapped undefined checkbox: ${fieldName} → ${mapping.label} (${mapping.context})`);
             } else {
               console.log(`🚫 Skipping undefined checkbox: ${fieldName} at index ${index} (no mapping available)`);
               return null;
@@ -777,19 +454,19 @@ export async function POST(request: NextRequest) {
       })
       .filter(field => field !== null); // Remove null entries
     
-    console.log(`✅ Precise mapping completed: ${preciseFields.length} fields processed`);
+    console.log(`✅ Ultra precise mapping completed: ${ultraPreciseFields.length} fields processed`);
     
     return NextResponse.json({
       success: true,
-      fields: preciseFields,
-      totalFields: preciseFields.length,
+      fields: ultraPreciseFields,
+      totalFields: ultraPreciseFields.length,
       pdfDimensions: { width, height }
     });
     
   } catch (error) {
-    console.error('❌ Precise field mapping failed:', error);
+    console.error('❌ Ultra precise field mapping failed:', error);
     return NextResponse.json({ 
-      error: 'Precise field mapping failed',
+      error: 'Ultra precise field mapping failed',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
