@@ -1,10 +1,14 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-const AdjustablePDFOverlay = dynamic(() => import('@/components/AdjustablePDFOverlay'), { ssr: false });
+
+export const dynamic = 'force-dynamic';
+
+const AdjustablePDFOverlay = dynamic(
+  () => import('@/components/AdjustablePDFOverlay'),
+  { ssr: false }
+);
 
 export default function PDFAdjustablePage() {
   // Mock user profile for testing
