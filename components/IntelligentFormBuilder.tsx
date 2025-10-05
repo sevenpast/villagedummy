@@ -29,6 +29,7 @@ export default function IntelligentFormBuilder() {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [originalPdf, setOriginalPdf] = useState<ArrayBuffer | null>(null);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -43,17 +44,33 @@ export default function IntelligentFormBuilder() {
       const formData = new FormData();
       formData.append('pdf', file);
 
-      const response = await fetch('/api/pdf/simple-intelligent-analysis', {
+      console.log('📤 Uploading file for Gemini Vision analysis...');
+      
+      // Try Gemini Vision analysis first
+      let response = await fetch('/api/pdf/gemini-vision-analysis', {
         method: 'POST',
         body: formData,
       });
 
+      // If Gemini Vision fails, fallback to simple analysis
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        console.log('⚠️ Gemini Vision failed, trying fallback...');
+        response = await fetch('/api/pdf/simple-intelligent-analysis', {
+          method: 'POST',
+          body: formData,
+        });
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
+      console.log('📋 Analysis result:', result);
+      
       setAnalysisResult(result.analysis);
+      setOriginalPdf(await file.arrayBuffer());
       
       // Initialize form data with empty values
       const initialData: Record<string, any> = {};
@@ -159,12 +176,50 @@ export default function IntelligentFormBuilder() {
 
     setIsGenerating(true);
     try {
-      // This would call an API to generate the filled PDF
-      // For now, we'll just show a success message
-      alert('PDF generation feature coming soon!');
+      console.log('📝 Generating filled PDF with coordinates...');
+      
+      // Convert the original PDF to base64
+      const originalPdfBase64 = Buffer.from(await new Response(originalPdf).arrayBuffer()).toString('base64');
+      
+      // Call the fill-with-coordinates API
+      const response = await fetch('/api/pdf/fill-with-coordinates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pdfData: analysisResult,
+          fieldValues: formData,
+          originalPdfBase64: originalPdfBase64
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ PDF filled successfully:', result);
+
+      // Download the filled PDF
+      const filledPdfBytes = Buffer.from(result.filledPdf, 'base64');
+      const blob = new Blob([filledPdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'filled-form.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      alert('✅ Filled PDF downloaded successfully!');
+      
     } catch (error) {
-      console.error('PDF generation error:', error);
-      alert('Failed to generate PDF');
+      console.error('❌ PDF generation error:', error);
+      alert(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsGenerating(false);
     }
