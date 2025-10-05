@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PDFDocument, rgb } from 'pdf-lib';
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+// Note: pdfjs-dist is browser-focused and requires DOM APIs (e.g., DOMMatrix).
+// It is not needed for server-side filling with pdf-lib, so we avoid importing it here
+// to keep the server build environment Node-compatible on Vercel.
 
 export async function POST(request: NextRequest) {
   try {
