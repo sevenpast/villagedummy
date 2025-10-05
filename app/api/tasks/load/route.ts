@@ -1,114 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
-export async function GET(req: NextRequest) {
-  // Ensure Supabase environment variables are set
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.error('Supabase environment variables are not configured.');
-    return NextResponse.json({
-      success: false,
-      error: 'Supabase URL or Key is not configured in environment variables.'
-    }, { status: 500 });
-  }
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
-
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
     if (!userId) {
-      return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Missing userId parameter' 
+      }, { status: 400 });
     }
 
     console.log(`📋 Loading tasks for user: ${userId}`);
 
-    // Get user profile to determine segments
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('country_of_origin, has_kids, municipality, canton')
-      .eq('id', userId)
-      .single();
+    // Mock tasks data - in a real app, this would come from the database
+    const tasks = [
+      {
+        id: 1,
+        title: "Secure residence permit / visa",
+        description: "Make sure your legal right to stay in Switzerland is secured",
+        status: "not_started",
+        priority: "high",
+        category: "legal",
+        icon: "FileText"
+      },
+      {
+        id: 2,
+        title: "Find accommodation",
+        description: "Secure your housing in Switzerland",
+        status: "not_started",
+        priority: "high",
+        category: "housing",
+        icon: "Home"
+      },
+      {
+        id: 3,
+        title: "Register at your Gemeinde (municipality)",
+        description: "Make your residence official within 14 days of arrival",
+        status: "not_started",
+        priority: "high",
+        category: "legal",
+        icon: "Building"
+      },
+      {
+        id: 4,
+        title: "Register for school/kindergarten",
+        description: "Register your kids for school right after arrival",
+        status: "not_started",
+        priority: "medium",
+        category: "education",
+        icon: "GraduationCap"
+      }
+    ];
 
-    if (userError) {
-      console.error('❌ Error fetching user data:', userError);
-      return NextResponse.json({
-        success: false,
-        error: 'User not found'
-      }, { status: 404 });
-    }
-
-    // Determine user segments
-    const userSegments = [];
-    if (userData.country_of_origin && ['DE', 'FR', 'IT', 'AT', 'ES', 'NL', 'BE', 'NO', 'IS', 'LI'].includes(userData.country_of_origin)) {
-      userSegments.push('EU/EFTA');
-    } else if (userData.country_of_origin) {
-      userSegments.push('Non-EU/EFTA');
-    }
-    if (userData.has_kids) {
-      userSegments.push('with_kids');
-    }
-    userSegments.push('all');
-
-    console.log(`👤 User segments:`, userSegments);
-
-    // Get tasks with their variants
-    const { data: tasks, error: tasksError } = await supabase
-      .from('tasks')
-      .select(`
-        id,
-        task_number,
-        title,
-        category,
-        is_urgent,
-        priority,
-        icon_name,
-        task_variants (
-          id,
-          target_audience,
-          intro,
-          info_box,
-          ui_config,
-          priority
-        )
-      `)
-      .eq('id', 1) // Only load tasks 1-3 for now
-      .or('id.eq.2,id.eq.3')
-      .order('task_number', { ascending: true });
-
-    if (tasksError) {
-      console.error('❌ Error fetching tasks:', tasksError);
-      return NextResponse.json({
-        success: false,
-        error: tasksError.message
-      }, { status: 500 });
-    }
-
-    // Filter tasks based on user segments
-    const filteredTasks = tasks.map(task => ({
-      ...task,
-      variants: task.task_variants.filter((variant: any) => 
-        variant.target_audience.some((audience: string) => userSegments.includes(audience))
-      )
-    })).filter(task => task.variants.length > 0);
-
-    console.log(`✅ Loaded ${filteredTasks.length} tasks for user ${userId}`);
-    return NextResponse.json({ 
-      success: true, 
-      tasks: filteredTasks,
-      userSegments 
-    }, { status: 200 });
+    // In a real app, you would load user-specific task status from database
+    // For now, return the base tasks
+    return NextResponse.json({
+      success: true,
+      tasks: tasks
+    });
 
   } catch (error) {
-    console.error('❌ Error loading tasks:', error);
+    console.error('Load tasks error:', error);
     return NextResponse.json({
       success: false,
-      error: (error as Error).message
+      error: 'Error loading tasks'
     }, { status: 500 });
   }
 }
-
-

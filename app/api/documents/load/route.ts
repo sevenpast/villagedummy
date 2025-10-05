@@ -30,8 +30,8 @@ export async function GET(request: NextRequest) {
 
     // Get documents from database (without file_data for performance)
     const { data, error } = await supabase
-      .from('documents_vault')
-      .select('id, file_name, original_name, file_type, file_size, document_type, tags, confidence, description, uploaded_at')
+      .from('documents')
+      .select('id, file_name, file_type, file_size, document_type, uploaded_at')
       .eq('user_id', userId)
       .order('uploaded_at', { ascending: false });
 
