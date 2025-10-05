@@ -447,6 +447,131 @@ export async function POST(request: NextRequest) {
         context: 'Special Needs',
         position: { x: 100, y: 1160 },
         size: { width: 100, height: 20 }
+      },
+      
+      // === ADDITIONAL MISSING FIELDS ===
+      'Geschlecht': { 
+        name: 'childGender', 
+        label: 'Gender', 
+        type: 'radio', 
+        required: true, 
+        context: 'Child Personal Info',
+        position: { x: 100, y: 250 },
+        size: { width: 200, height: 20 }
+      },
+      'Staatsangehörigkeit': { 
+        name: 'childNationality', 
+        label: 'Nationality', 
+        type: 'text', 
+        required: true, 
+        context: 'Child Personal Info',
+        position: { x: 100, y: 300 },
+        size: { width: 120, height: 20 }
+      },
+      'Geburtsdatum_2': { 
+        name: 'fatherBirthDate', 
+        label: 'Father Date of Birth', 
+        type: 'date', 
+        context: 'Father Info',
+        position: { x: 400, y: 500 },
+        size: { width: 100, height: 20 }
+      },
+      'Geburtsdatum_3': { 
+        name: 'motherBirthDate', 
+        label: 'Mother Date of Birth', 
+        type: 'date', 
+        context: 'Mother Info',
+        position: { x: 400, y: 600 },
+        size: { width: 100, height: 20 }
+      },
+      'Umgangssprache in der Familie': { 
+        name: 'familyLanguage', 
+        label: 'Language Spoken in Family', 
+        type: 'text', 
+        required: true, 
+        context: 'Language Info',
+        position: { x: 100, y: 350 },
+        size: { width: 200, height: 20 }
+      },
+      'Deutschkenntnisse': { 
+        name: 'germanSkills', 
+        label: 'German Language Skills', 
+        type: 'text', 
+        context: 'Language Info',
+        position: { x: 100, y: 400 },
+        size: { width: 200, height: 20 }
+      },
+      'Muttersprache': { 
+        name: 'motherTongue', 
+        label: 'Mother Tongue', 
+        type: 'text', 
+        context: 'Language Info',
+        position: { x: 100, y: 450 },
+        size: { width: 150, height: 20 }
+      },
+      'Logopädie': { 
+        name: 'speechTherapy', 
+        label: 'Speech Therapy', 
+        type: 'checkbox', 
+        context: 'Therapy Services',
+        position: { x: 100, y: 1000 },
+        size: { width: 15, height: 15 }
+      },
+      'Psychomotorik': { 
+        name: 'psychomotorTherapy', 
+        label: 'Psychomotor Therapy', 
+        type: 'checkbox', 
+        context: 'Therapy Services',
+        position: { x: 200, y: 1000 },
+        size: { width: 15, height: 15 }
+      },
+      'DaZ-Unterricht': { 
+        name: 'germanAsSecondLanguage', 
+        label: 'German as Second Language', 
+        type: 'checkbox', 
+        context: 'Therapy Services',
+        position: { x: 300, y: 1000 },
+        size: { width: 15, height: 15 }
+      },
+      'Integrative Förderung': { 
+        name: 'integrativeSupport', 
+        label: 'Integrative Support', 
+        type: 'checkbox', 
+        context: 'Therapy Services',
+        position: { x: 100, y: 1030 },
+        size: { width: 15, height: 15 }
+      },
+      'Begabtenförderung': { 
+        name: 'giftedSupport', 
+        label: 'Gifted Support', 
+        type: 'checkbox', 
+        context: 'Therapy Services',
+        position: { x: 200, y: 1030 },
+        size: { width: 15, height: 15 }
+      },
+      'Sonderschulung': { 
+        name: 'specialEducation', 
+        label: 'Special Education', 
+        type: 'checkbox', 
+        context: 'Therapy Services',
+        position: { x: 300, y: 1030 },
+        size: { width: 15, height: 15 }
+      },
+      'Nachteilsausgleich': { 
+        name: 'disadvantageCompensation', 
+        label: 'Disadvantage Compensation', 
+        type: 'checkbox', 
+        context: 'Special Needs',
+        position: { x: 100, y: 1100 },
+        size: { width: 15, height: 15 }
+      },
+      'Lernzielbefreiung': { 
+        name: 'learningObjectiveExemption', 
+        label: 'Learning Objective Exemption', 
+        type: 'checkbox', 
+        context: 'Special Needs',
+        position: { x: 200, y: 1100 },
+        size: { width: 15, height: 15 }
       }
     };
 
@@ -464,7 +589,7 @@ export async function POST(request: NextRequest) {
           return null;
         }
         
-        // Skip undefined fields without clear context
+        // Skip undefined fields without clear context (but keep checkboxes for mapping)
         if (fieldName.startsWith('undefined') && !fieldType.includes('CheckBox')) {
           console.log(`🚫 Skipping field: ${fieldName} (undefined without context)`);
           return null;
@@ -508,9 +633,79 @@ export async function POST(request: NextRequest) {
         } else {
           // Handle undefined checkboxes with intelligent context detection
           if (fieldName.startsWith('undefined') && fieldType.includes('CheckBox')) {
-            // Skip undefined checkboxes without clear context
-            console.log(`🚫 Skipping undefined checkbox: ${fieldName} at index ${index} (no clear context)`);
-            return null;
+            // Map undefined checkboxes based on their position and context
+            const checkboxMappings = [
+              // Therapy and support checkboxes (based on typical Swiss form layout)
+              { name: 'speechTherapy', label: 'Speech Therapy (Logopädie)', context: 'Therapy Services' },
+              { name: 'psychomotorTherapy', label: 'Psychomotor Therapy', context: 'Therapy Services' },
+              { name: 'integrativeSupport', label: 'Integrative Support (IF)', context: 'Therapy Services' },
+              { name: 'germanAsSecondLanguage', label: 'German as Second Language (DaZ)', context: 'Therapy Services' },
+              { name: 'giftedSupport', label: 'Gifted Support', context: 'Therapy Services' },
+              { name: 'specialEducation', label: 'Special Education', context: 'Therapy Services' },
+              { name: 'disadvantageCompensation', label: 'Disadvantage Compensation', context: 'Special Needs' },
+              { name: 'learningObjectiveExemption', label: 'Learning Objective Exemption', context: 'Special Needs' },
+              { name: 'isrSupport', label: 'ISR Support', context: 'Special Needs' },
+              { name: 'ssaSupport', label: 'SSA Support', context: 'Special Needs' },
+              { name: 'otherSupport', label: 'Other Support', context: 'Special Needs' },
+              { name: 'additionalTherapy1', label: 'Additional Therapy 1', context: 'Therapy Services' },
+              { name: 'additionalTherapy2', label: 'Additional Therapy 2', context: 'Therapy Services' },
+              { name: 'additionalTherapy3', label: 'Additional Therapy 3', context: 'Therapy Services' },
+              { name: 'additionalTherapy4', label: 'Additional Therapy 4', context: 'Therapy Services' },
+              { name: 'additionalTherapy5', label: 'Additional Therapy 5', context: 'Therapy Services' },
+              { name: 'additionalTherapy6', label: 'Additional Therapy 6', context: 'Therapy Services' },
+              { name: 'additionalTherapy7', label: 'Additional Therapy 7', context: 'Therapy Services' },
+              { name: 'additionalTherapy8', label: 'Additional Therapy 8', context: 'Therapy Services' },
+              { name: 'additionalTherapy9', label: 'Additional Therapy 9', context: 'Therapy Services' },
+              { name: 'additionalTherapy10', label: 'Additional Therapy 10', context: 'Therapy Services' },
+              { name: 'additionalTherapy11', label: 'Additional Therapy 11', context: 'Therapy Services' },
+              { name: 'additionalTherapy12', label: 'Additional Therapy 12', context: 'Therapy Services' },
+              { name: 'additionalTherapy13', label: 'Additional Therapy 13', context: 'Therapy Services' },
+              { name: 'additionalTherapy14', label: 'Additional Therapy 14', context: 'Therapy Services' },
+              { name: 'additionalTherapy15', label: 'Additional Therapy 15', context: 'Therapy Services' },
+              { name: 'additionalTherapy16', label: 'Additional Therapy 16', context: 'Therapy Services' },
+              { name: 'additionalTherapy17', label: 'Additional Therapy 17', context: 'Therapy Services' },
+              { name: 'additionalTherapy18', label: 'Additional Therapy 18', context: 'Therapy Services' },
+              { name: 'additionalTherapy19', label: 'Additional Therapy 19', context: 'Therapy Services' },
+              { name: 'additionalTherapy20', label: 'Additional Therapy 20', context: 'Therapy Services' },
+              { name: 'additionalTherapy21', label: 'Additional Therapy 21', context: 'Therapy Services' },
+              { name: 'additionalTherapy22', label: 'Additional Therapy 22', context: 'Therapy Services' },
+              { name: 'additionalTherapy23', label: 'Additional Therapy 23', context: 'Therapy Services' },
+              { name: 'additionalTherapy24', label: 'Additional Therapy 24', context: 'Therapy Services' }
+            ];
+            
+            // Extract index from undefined field name
+            const match = fieldName.match(/undefined(?:_(\d+))?/);
+            let checkboxIndex = 0;
+            if (match && match[1]) {
+              checkboxIndex = parseInt(match[1]) - 1;
+            } else {
+              // For "undefined" without number, use field index
+              checkboxIndex = index;
+            }
+            
+            if (checkboxIndex >= 0 && checkboxIndex < checkboxMappings.length) {
+              const mapping = checkboxMappings[checkboxIndex];
+              intelligentFieldName = mapping.name;
+              originalLabel = fieldName;
+              translatedLabel = mapping.label;
+              mappedFieldType = 'checkbox';
+              required = false;
+              validation = 'text';
+              placeholder = mapping.label;
+              context = mapping.context;
+              
+              // Estimate position for checkboxes
+              position = { 
+                x: 100 + (checkboxIndex % 4) * 150, 
+                y: 1000 + Math.floor(checkboxIndex / 4) * 30 
+              };
+              size = { width: 15, height: 15 };
+              
+              console.log(`✅ Mapped undefined checkbox: ${fieldName} → ${mapping.label} (${mapping.context})`);
+            } else {
+              console.log(`🚫 Skipping undefined checkbox: ${fieldName} at index ${index} (no mapping available)`);
+              return null;
+            }
           } else {
             // For other unknown fields, create intelligent names
             intelligentFieldName = fieldName
