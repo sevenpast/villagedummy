@@ -44,12 +44,13 @@ export async function POST(request: NextRequest) {
         mappedFieldType = 'select';
       }
       
-      // Intelligent field name mapping based on context and position
+      // Enhanced intelligent field mapping with better translations
       let intelligentFieldName = fieldName;
       let originalLabel = fieldName;
       let translatedLabel = fieldName;
       let required = false;
       let validation = 'text';
+      let placeholder = fieldName;
       let options: any[] = [];
       
       // Map known fields

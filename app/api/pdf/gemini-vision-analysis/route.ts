@@ -62,50 +62,41 @@ export async function POST(request: NextRequest) {
 
     // Create the comprehensive prompt for form analysis
     const prompt = `
-Du bist ein Experte für die Analyse von PDF-Formularen. Ich sende dir eine PDF-Datei und zusätzliche technische Informationen über die Formularfelder.
+Analysiere das Bild dieses Formulars. Deine Aufgabe ist es, ALLE ausfüllbaren Felder für einen Benutzer zu extrahieren und als valides JSON-Array auszugeben.
 
-TECHNISCHE FELDINFORMATIONEN:
+TECHNISCHE FELDINFORMATIONEN (als Referenz):
 ${fieldDescriptions}
 
 PDF-DIMENSIONEN: ${width} x ${height} Punkte
 
-WICHTIGE ANWEISUNGEN:
-1. Analysiere die PDF visuell und identifiziere ALLE ausfüllbaren Felder
-2. Verwende die technischen Feldinformationen als Referenz, aber interpretiere sie intelligent
-3. Extrahiere die deutsche Beschriftung (Label) für jedes Feld
-4. Übersetze jede deutsche Beschriftung ins Englische
-5. Bestimme den Feldtyp (text, checkbox, radio, select, date, email, tel)
-6. Schätze die X/Y-Koordinaten für jedes Eingabefeld (relativ zur PDF-Seite)
-7. Bestimme, ob das Feld erforderlich ist (required: true/false)
-8. Für Radio-Buttons und Dropdowns: liste alle verfügbaren Optionen auf
+**WICHTIGE REGELN:**
+1. **Ignoriere Störelemente:** Extrahiere KEINE Felder, die nur aus Zahlen, Aufzählungszeichen oder dekorativen Linien bestehen. Ein Feld ist nur dann ein Feld, wenn es eine klare Beschriftung und einen Platz für eine Benutzereingabe hat. Die Felder "1", "2", "1_2" aus dem Beispiel sind KEINE gültigen Felder.
+2. **Extrahiere den VOLLSTÄNDIGEN Kontext:** Die Beschriftung eines Feldes ist der gesamte Text, der logisch dazu gehört. Extrahiere z.B. "Logopädie, seit" und NICHT nur "seit".
+3. **Umgang mit unbeschrifteten Feldern:** Wenn du ein Eingabefeld (besonders eine Checkbox) ohne direkt zuordenbaren Text findest, setze den Wert für "original_label" auf \`null\`. Erfinde keine "undefined"-Namen.
+4. **Intelligente Gruppierung:** Gruppiere zusammengehörige Felder (z.B. "männlich" und "weiblich" als Gender-Optionen).
+5. **Präzise Übersetzungen:** Übersetze jeden deutschen Begriff präzise ins Englische. "Vorname" = "First Name", "Geburtsdatum" = "Date of Birth", "Umgangssprache in der Familie" = "Language Spoken in Family".
 
-BESONDERE HINWEISE:
-- Felder mit Namen wie "undefined", "undefined_2" etc. sind wahrscheinlich Checkboxen ohne Label
-- Felder mit Namen wie "Vorname", "Name", "Geburtsdatum" sind Textfelder
-- Felder mit Namen wie "männlich", "weiblich" sind wahrscheinlich Radio-Button-Optionen
-- Koordinaten: X geht von links (0) nach rechts (${width}), Y geht von oben (0) nach unten (${height})
+**BEISPIEL FÜR EIN PERFEKTES ERGEBNIS:**
+{
+  "fieldName": "childFirstName",
+  "originalLabel": "Vorname",
+  "translatedLabel": "First Name",
+  "fieldType": "text",
+  "position": { "x": 123, "y": 456 },
+  "size": { "width": 150, "height": 25 },
+  "required": true,
+  "options": [],
+  "validation": "required",
+  "placeholder": "Vorname"
+}
 
-ANTWORT-FORMAT:
-Deine Antwort MUSS ausschließlich ein JSON-Array sein, ohne Markdown-Formatierung. Das JSON muss exakt folgendem Schema entsprechen:
+**FINALES JSON-FORMAT:**
+- Das Ergebnis MUSS ein JSON-Array sein.
+- Jedes Objekt im Array MUSS die Schlüssel "fieldName", "originalLabel", "translatedLabel", "fieldType", "position", "size", "required", "options", "validation", und "placeholder" enthalten.
+- Der "fieldType" MUSS 'text', 'date', 'checkbox', 'radio', 'email', oder 'tel' sein.
+- Koordinaten: X geht von links (0) nach rechts (${width}), Y geht von oben (0) nach unten (${height}).
 
-[
-  {
-    "fieldName": "string (eindeutiger technischer Name in camelCase)",
-    "originalLabel": "string (das genaue deutsche Label aus dem PDF)",
-    "translatedLabel": "string (die englische Übersetzung)",
-    "fieldType": "string (text|checkbox|radio|select|date|email|tel)",
-    "position": { "x": number, "y": number },
-    "size": { "width": number, "height": number },
-    "required": boolean,
-    "options": [
-      { "original": "string", "translated": "string" }
-    ],
-    "validation": "string (text|email|tel|date|required)",
-    "placeholder": "string (deutsche Beschriftung als Platzhalter)"
-  }
-]
-
-Analysiere jetzt die PDF und gib mir das JSON-Array zurück.`;
+Finde nun alle Felder im Dokument, die diesen strengen Regeln folgen.`;
 
     // Send to Gemini Vision with the converted image
     console.log('🔍 Sending image to Gemini Vision for analysis...');
