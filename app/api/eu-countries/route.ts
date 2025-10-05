@@ -131,7 +131,6 @@ const euEftaCountries = {
   'BI': { name: 'Burundi', isEU: false, isEFTA: false },
   'MW': { name: 'Malawi', isEU: false, isEFTA: false },
   'MZ': { name: 'Mozambique', isEU: false, isEFTA: false },
-  'MG': { name: 'Madagascar', isEU: false, isEFTA: false },
   'CV': { name: 'Cape Verde', isEU: false, isEFTA: false },
   'GW': { name: 'Guinea-Bissau', isEU: false, isEFTA: false },
   'GN': { name: 'Guinea', isEU: false, isEFTA: false },
