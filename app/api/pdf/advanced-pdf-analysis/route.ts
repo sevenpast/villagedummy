@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { PDFDocument } from 'pdf-lib';
 
+// Use the v1 API endpoint by default
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
 // Finaler, hochpräziser Prompt für Gemini 1.5 Pro
 const FINAL_GEMINI_PROMPT = `
-Analysiere alle Seiten des bereitgestellten, hochauflösenden Bildes eines Dokuments. Deine Aufgabe ist es, alle für den Benutzer relevanten Elemente zu extrahieren und als ein einziges, valides JSON-Array auszugeben.
+Analysiere das Bild dieses Formulars. Deine Aufgabe ist es, ALLE ausfüllbaren Felder für einen Benutzer zu extrahieren und als valides JSON-Array auszugeben.
 
 **STRENGE REGELN FÜR DIE EXTRAKTION:**
 1. **Element-Typen:** Identifiziere zwei Arten von Elementen: 'input_field' (für Benutzereingaben) und 'text_block' (für Überschriften, Anweisungen, Absätze).
@@ -93,7 +96,7 @@ Analysiere jetzt das Dokument und gib mir das vollständige JSON-Array zurück.`
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔍 Advanced PDF Analysis API called');
+    console.log('🚀 Gemini Vision A-Z Analysis API called');
     
     const formData = await request.formData();
     const file = formData.get('pdf') as File;
@@ -117,8 +120,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize Gemini with the correct model and stable v1 API
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro-latest' });
 
     // Load PDF and get basic information
     const arrayBuffer = await file.arrayBuffer();
@@ -150,7 +152,7 @@ export async function POST(request: NextRequest) {
     const response = await result.response;
     const text = response.text();
     
-    console.log('✅ Gemini analysis completed');
+    console.log('✅ Gemini analysis successful');
     console.log('📋 Raw response length:', text.length);
 
     // Parse the JSON response
@@ -201,9 +203,23 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('❌ Advanced PDF analysis failed:', error);
+    
+    let errorMessage = 'An unknown error occurred';
+    if (error instanceof Error) {
+        errorMessage = error.message;
+    }
+    
+    // Check for specific API key error
+    if (errorMessage.includes('API key not valid')) {
+        return NextResponse.json({ 
+            error: 'Gemini API key is not valid. Please check your environment variables.',
+            details: errorMessage
+        }, { status: 401 });
+    }
+
     return NextResponse.json({ 
       error: 'Advanced PDF analysis failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: errorMessage
     }, { status: 500 });
   }
 }

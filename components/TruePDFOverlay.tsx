@@ -65,18 +65,19 @@ export default function TruePDFOverlay({ onAnalysisComplete, onFormSubmit }: Tru
       const url = URL.createObjectURL(file);
       setPdfUrl(url);
 
-      // Analyze PDF with precise field mapper
-      const formData = new FormData();
-      formData.append('pdf', file);
+      // Analyze PDF with the definitive Gemini Vision A-Z analysis API
+      const formDataApi = new FormData();
+      formDataApi.append('pdf', file);
 
-      console.log('🔍 Starting PDF analysis...');
-      const response = await fetch('/api/pdf/ultra-precise-mapper', {
+      console.log('🚀 Calling the definitive A-Z Gemini Vision API...');
+      const response = await fetch('/api/pdf/advanced-pdf-analysis', {
         method: 'POST',
-        body: formData,
+        body: formDataApi,
       });
 
       if (!response.ok) {
-        throw new Error(`Analysis failed: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Analysis failed with status: ${response.status}`);
       }
 
       const result = await response.json();
