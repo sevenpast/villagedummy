@@ -46,13 +46,22 @@ export default function IntelligentFormBuilder() {
 
       console.log('📤 Uploading file for Gemini Vision analysis...');
       
-      // Try Gemini Vision analysis first
-      let response = await fetch('/api/pdf/gemini-vision-analysis', {
+      // Try intelligent field mapping first
+      let response = await fetch('/api/pdf/intelligent-field-mapper', {
         method: 'POST',
         body: formData,
       });
 
-      // If Gemini Vision fails, fallback to simple analysis
+      // If intelligent mapping fails, try Gemini Vision
+      if (!response.ok) {
+        console.log('⚠️ Intelligent mapping failed, trying Gemini Vision...');
+        response = await fetch('/api/pdf/gemini-vision-analysis', {
+          method: 'POST',
+          body: formData,
+        });
+      }
+
+      // If Gemini Vision also fails, fallback to simple analysis
       if (!response.ok) {
         console.log('⚠️ Gemini Vision failed, trying fallback...');
         response = await fetch('/api/pdf/simple-intelligent-analysis', {
