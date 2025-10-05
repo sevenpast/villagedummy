@@ -91,8 +91,8 @@ export async function POST(request: NextRequest) {
     console.error('Error filling PDF form:', error);
     return NextResponse.json({
       success: false,
-      error: `Error filling PDF form: ${error.message}`,
-      details: error.message
+      error: `Error filling PDF form: ${error instanceof Error ? error.message : String(error)}`,
+      details: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
 }
