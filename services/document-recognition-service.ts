@@ -96,7 +96,7 @@ class DocumentRecognitionService {
         return this.fallbackPatternAnalysis(text);
       }
 
-      const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+      const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
 
       // Convert file to base64 for image analysis
       const base64 = await this.fileToBase64(file);

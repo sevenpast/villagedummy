@@ -27,7 +27,7 @@ export async function translateToEnglish(text: string): Promise<string> {
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro-latest' });
 
     const prompt = `Translate this Swiss/German form field name to English with context awareness. Return ONLY the English translation.
 
@@ -96,7 +96,7 @@ export async function batchTranslateToEnglish(texts: string[]): Promise<string[]
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro-latest' });
 
     const fieldList = toTranslate.map((item, i) => `${i + 1}. ${item.text}`).join('\n');
 
@@ -169,7 +169,7 @@ export async function translateFormFieldWithContext(
   const cacheKey = `${fieldName}:${fieldType}:${contextHints.join(',')}`;
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro-latest' });
 
     const prompt = `Analyze this Swiss/German form field and provide the best English translation:
 

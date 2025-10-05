@@ -3,7 +3,7 @@ import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 
 // Initialize the Generative AI model
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro-latest' });
 
 // Define interfaces for structured data
 interface UserProfile {

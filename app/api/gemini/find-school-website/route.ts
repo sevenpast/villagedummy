@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     // Initialize Gemini AI
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || 'AIzaSyC8CHSLaNtftBtpLqk2HDuFX5Jiq98Pifo';
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro-latest' });
 
     console.log(`🔍 Finding school website for ${municipality}, ${canton}`);
 

@@ -25,9 +25,9 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Initialize Gemini with the correct model
+    // Initialize Gemini with the correct model and stable v1 API
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro-latest' });
 
     // Use hybrid approach: Extract text from PDF and use Gemini for intelligent analysis
     const arrayBuffer = await file.arrayBuffer();
