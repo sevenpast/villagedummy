@@ -44,17 +44,21 @@ export default function AdvancedPDFOverlay({ onAnalysisComplete, onFormSubmit }:
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pdfContainerRef = useRef<HTMLDivElement>(null);
 
-  // Load PDF.js dynamically
+  // Load PDF.js dynamically with proper version handling
   useEffect(() => {
     const loadPDFJS = async () => {
       try {
         // @ts-ignore
         const pdfjsLib = await import('pdfjs-dist');
+        
+        // Set worker source with fallback
         // @ts-ignore
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+        
+        console.log('✅ PDF.js loaded successfully, version:', pdfjsLib.version);
         return pdfjsLib;
       } catch (error) {
-        console.error('Failed to load PDF.js:', error);
+        console.error('❌ Failed to load PDF.js:', error);
         return null;
       }
     };
@@ -132,8 +136,24 @@ export default function AdvancedPDFOverlay({ onAnalysisComplete, onFormSubmit }:
       // @ts-ignore
       const pdfjsLib = await import('pdfjs-dist');
       
+      // Ensure worker is properly configured
+      // @ts-ignore
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        // @ts-ignore
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+      }
+      
+      console.log('📄 Loading PDF with PDF.js version:', pdfjsLib.version);
+      
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const pdf = await pdfjsLib.getDocument({ 
+        data: arrayBuffer,
+        useWorkerFetch: false,
+        isEvalSupported: false,
+        useSystemFonts: true
+      }).promise;
+      
+      console.log(`📄 PDF loaded: ${pdf.numPages} pages`);
       
       const pages = [];
       for (let i = 1; i <= pdf.numPages; i++) {
@@ -155,12 +175,17 @@ export default function AdvancedPDFOverlay({ onAnalysisComplete, onFormSubmit }:
           canvas: canvas,
           viewport: viewport
         });
+        
+        console.log(`✅ Rendered page ${i}/${pdf.numPages}`);
       }
       
       setPdfPages(pages);
-      console.log(`✅ Loaded ${pages.length} PDF pages`);
+      console.log(`✅ Successfully loaded ${pages.length} PDF pages`);
     } catch (error) {
       console.error('❌ Failed to load PDF with PDF.js:', error);
+      
+      // Fallback: show error message but don't crash
+      setError(`PDF loading failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
   };
