@@ -64,12 +64,12 @@ export default function TruePDFOverlay({ onAnalysisComplete, onFormSubmit }: Tru
       const url = URL.createObjectURL(file);
       setPdfUrl(url);
 
-      // Analyze PDF with Gemini using the enhanced field mapper
+      // Analyze PDF with precise field mapper
       const formData = new FormData();
       formData.append('pdf', file);
 
       console.log('🔍 Starting PDF analysis...');
-      const response = await fetch('/api/pdf/enhanced-field-mapper', {
+      const response = await fetch('/api/pdf/precise-field-mapper', {
         method: 'POST',
         body: formData,
       });
@@ -154,26 +154,44 @@ export default function TruePDFOverlay({ onAnalysisComplete, onFormSubmit }: Tru
 
       const user = JSON.parse(userData);
       
-      // Enhanced field mapping based on common patterns
+      // Precise field mapping based on the new field names
       const fieldMappings: Record<string, string> = {
-        'Vorname': user.first_name || '',
-        'Name': user.last_name || '',
-        'Nachname': user.last_name || '',
-        'EMail': user.email || '',
-        'EMailAdresse': user.email || '',
-        'Mobile': user.phone || '',
-        'Telefonnummer': user.phone || '',
-        'Adresse': user.current_address || '',
-        'Staatsangehörigkeit': user.nationality || '',
-        'Nationalität': user.nationality || '',
-        'Geburtsort': user.birth_place || '',
-        'Bürgerort': user.birth_place || '',
-        'Deutschkenntnisse': user.german_skills || '',
-        'Muttersprache': user.first_language || '',
-        'Erstsprache': user.first_language || '',
-        'UmgangsspracheinderFamilie': user.family_language || '',
-        'Beruf': user.profession || '',
-        'Funktion': user.profession || ''
+        // Child information
+        'childFirstName': user.first_name || '',
+        'childLastName': user.last_name || '',
+        'childBirthDate': user.birth_date || '',
+        'childNationality': user.nationality || '',
+        'childBirthPlace': user.birth_place || '',
+        
+        // Father information
+        'fatherFirstName': user.first_name || '',
+        'fatherLastName': user.last_name || '',
+        'fatherNationality': user.nationality || '',
+        'fatherProfession': user.profession || '',
+        
+        // Mother information
+        'motherFirstName': user.first_name || '',
+        'motherLastName': user.last_name || '',
+        'motherNationality': user.nationality || '',
+        'motherProfession': user.profession || '',
+        
+        // Contact information
+        'email': user.email || '',
+        'email2': user.email || '',
+        'emailAddress': user.email || '',
+        'mobilePhone': user.phone || '',
+        'mobilePhone2': user.phone || '',
+        'phone': user.phone || '',
+        
+        // Address information
+        'address': user.current_address || '',
+        'addressLine2': user.current_address || '',
+        
+        // Language information
+        'familyLanguage': user.family_language || '',
+        'germanSkills': user.german_skills || '',
+        'motherTongue': user.first_language || '',
+        'firstLanguage': user.first_language || ''
       };
       
       const newFormData = { ...formData };
