@@ -51,9 +51,9 @@ export default function AdvancedPDFOverlay({ onAnalysisComplete, onFormSubmit }:
         // @ts-ignore
         const pdfjsLib = await import('pdfjs-dist');
         
-        // Set worker source with fallback
+        // Set worker source for version 3.11.174
         // @ts-ignore
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         
         console.log('✅ PDF.js loaded successfully, version:', pdfjsLib.version);
         return pdfjsLib;
@@ -136,21 +136,17 @@ export default function AdvancedPDFOverlay({ onAnalysisComplete, onFormSubmit }:
       // @ts-ignore
       const pdfjsLib = await import('pdfjs-dist');
       
-      // Ensure worker is properly configured
+      // Ensure worker is properly configured for version 3.11.174
       // @ts-ignore
-      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-        // @ts-ignore
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-      }
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       
       console.log('📄 Loading PDF with PDF.js version:', pdfjsLib.version);
       
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ 
         data: arrayBuffer,
-        useWorkerFetch: false,
-        isEvalSupported: false,
-        useSystemFonts: true
+        cMapUrl: '//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+        cMapPacked: true
       }).promise;
       
       console.log(`📄 PDF loaded: ${pdf.numPages} pages`);
