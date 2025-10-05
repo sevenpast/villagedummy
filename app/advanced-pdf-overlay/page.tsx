@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import SimplePDFOverlay from '../../components/SimplePDFOverlay';
+import TruePDFOverlay from '../../components/TruePDFOverlay';
 
 export default function AdvancedPDFOverlayPage() {
   const handleAnalysisComplete = (result: any) => {
@@ -18,15 +18,16 @@ export default function AdvancedPDFOverlayPage() {
       <div className="container mx-auto py-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Advanced PDF Form Overlay
+            True PDF Form Overlay
           </h1>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Upload a PDF form and get an intelligent overlay with automatic translation, 
-            field detection, and autofill capabilities. Perfect for Swiss government forms.
+            Upload a PDF form and get a true overlay with interactive form fields positioned 
+            directly over the original PDF. Automatic translation, field detection, and autofill 
+            capabilities. Perfect for Swiss government forms.
           </p>
         </div>
 
-        <SimplePDFOverlay
+        <TruePDFOverlay
           onAnalysisComplete={handleAnalysisComplete}
           onFormSubmit={handleFormSubmit}
         />
