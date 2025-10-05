@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ PDF successfully generated');
 
-    return new NextResponse(pdfBytes, {
+    return new NextResponse(pdfBytes as any, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
