@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { PDFDocument, PDFForm } from 'pdf-lib';
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+// Note: Avoid importing pdfjs-dist in a server route (requires DOM APIs like DOMMatrix)
 
 export async function POST(request: NextRequest) {
   try {
