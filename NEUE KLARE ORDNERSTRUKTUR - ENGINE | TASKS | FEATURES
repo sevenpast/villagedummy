@@ -1,0 +1,191 @@
+village-app/
+│
+├── 📂 app/                          # Next.js App Router (UI ONLY)
+│   ├── (auth)/
+│   │   ├── login/
+│   │   │   └── page.tsx            # Thin UI wrapper
+│   │   └── layout.tsx
+│   │
+│   ├── (dashboard)/
+│   │   ├── dashboard/
+│   │   │   └── page.tsx            # Thin UI - calls engine
+│   │   ├── tasks/
+│   │   │   └── [taskId]/
+│   │   │       └── page.tsx        # Dynamic task router
+│   │   └── layout.tsx
+│   │
+│   ├── api/                         # Thin API routes
+│   │   ├── tasks/
+│   │   │   └── [action]/
+│   │   │       └── route.ts        # Just calls engine
+│   │   └── features/
+│   │       └── pdf/
+│   │           ├── upload/
+│   │           │   └── route.ts
+│   │           └── analyze/
+│   │               └── route.ts
+│   │
+│   ├── page.tsx
+│   ├── layout.tsx
+│   └── globals.css
+│
+├── 📂 engine/                       # 🔥 CORE ENGINE (Business Logic)
+│   ├── core/                        # Core system
+│   │   ├── task-engine.ts          # Task matching & personalization
+│   │   ├── user-engine.ts          # User segmentation & profile
+│   │   ├── ai-engine.ts            # AI orchestration
+│   │   └── notification-engine.ts  # Reminders & notifications
+│   │
+│   ├── services/                    # Business services
+│   │   ├── task-service.ts         # Task CRUD & logic
+│   │   ├── user-service.ts         # User CRUD & logic
+│   │   ├── auth-service.ts         # Authentication logic
+│   │   └── analytics-service.ts    # Event tracking
+│   │
+│   ├── ai/                          # AI layer
+│   │   ├── providers/
+│   │   │   ├── gemini.ts           # Gemini provider
+│   │   │   ├── openai.ts           # OpenAI provider (future)
+│   │   │   └── anthropic.ts        # Claude provider (future)
+│   │   │
+│   │   ├── prompts/
+│   │   │   ├── task-generation.ts  # Task-related prompts
+│   │   │   ├── email-generation.ts # Email prompts
+│   │   │   └── document-analysis.ts # PDF analysis prompts
+│   │   │
+│   │   └── orchestrator.ts         # AI request orchestrator
+│   │
+│   ├── database/                    # Database layer
+│   │   ├── client.ts               # Supabase client
+│   │   ├── queries/
+│   │   │   ├── tasks.ts            # Task queries
+│   │   │   ├── users.ts            # User queries
+│   │   │   └── documents.ts        # Document queries
+│   │   │
+│   │   └── mutations/
+│   │       ├── tasks.ts            # Task mutations
+│   │       └── users.ts            # User mutations
+│   │
+│   ├── utils/                       # Utilities
+│   │   ├── date.ts
+│   │   ├── validation.ts
+│   │   ├── formatting.ts
+│   │   └── constants.ts
+│   │
+│   └── types/                       # Shared types
+│       ├── task.ts
+│       ├── user.ts
+│       └── index.ts
+│
+├── 📂 tasks/                        # 📋 TASK IMPLEMENTATIONS
+│   ├── components/                  # Task UI components
+│   │   ├── Task1ResidencePermit/
+│   │   │   ├── index.tsx           # Main component
+│   │   │   ├── PermitForm.tsx      # Sub-component
+│   │   │   └── styles.module.css   # Task-specific styles
+│   │   │
+│   │   ├── Task3Municipality/
+│   │   │   ├── index.tsx
+│   │   │   ├── ChecklistGenerator.tsx
+│   │   │   └── EmailGenerator.tsx
+│   │   │
+│   │   ├── Task4School/
+│   │   │   ├── index.tsx
+│   │   │   └── SchoolRegistration.tsx
+│   │   │
+│   │   └── shared/                 # Shared task components
+│   │       ├── TaskCard.tsx
+│   │       ├── TaskHeader.tsx
+│   │       ├── TaskActions.tsx
+│   │       └── ProgressBar.tsx
+│   │
+│   ├── logic/                       # Task-specific logic
+│   │   ├── task1-permit.ts         # Task 1 business logic
+│   │   ├── task3-municipality.ts   # Task 3 business logic
+│   │   ├── task4-school.ts         # Task 4 business logic
+│   │   └── task-helpers.ts         # Shared task helpers
+│   │
+│   └── config/
+│       └── tasks.config.ts         # Task definitions & metadata
+│
+├── 📂 features/                     # ⚡ FEATURE MODULES
+│   ├── pdf-upload/                  # PDF Upload & Fill Feature
+│   │   ├── components/
+│   │   │   ├── PDFUploader.tsx     # Upload UI
+│   │   │   ├── PDFAnalyzer.tsx     # Analysis UI
+│   │   │   └── PDFEditor.tsx       # Field editor UI
+│   │   │
+│   │   ├── services/
+│   │   │   ├── pdf-service.ts      # PDF processing logic
+│   │   │   ├── pdf-parser.ts       # PDF parsing
+│   │   │   └── pdf-filler.ts       # PDF filling
+│   │   │
+│   │   └── types/
+│   │       └── pdf.ts              # PDF-specific types
+│   │
+│   ├── email-automation/            # Email Feature
+│   │   ├── components/
+│   │   │   ├── EmailComposer.tsx
+│   │   │   └── EmailPreview.tsx
+│   │   │
+│   │   └── services/
+│   │       └── email-service.ts
+│   │
+│   ├── document-manager/            # Document Management
+│   │   ├── components/
+│   │   │   ├── DocumentList.tsx
+│   │   │   └── DocumentViewer.tsx
+│   │   │
+│   │   └── services/
+│   │       └── document-service.ts
+│   │
+│   └── reminders/                   # Reminder System
+│       ├── components/
+│       │   └── ReminderModal.tsx
+│       │
+│       └── services/
+│           └── reminder-service.ts
+│
+├── 📂 components/                   # Shared UI Components
+│   ├── ui/                          # Base UI elements
+│   │   ├── Button.tsx
+│   │   ├── Input.tsx
+│   │   ├── Modal.tsx
+│   │   ├── Card.tsx
+│   │   └── Spinner.tsx
+│   │
+│   └── layout/                      # Layout components
+│       ├── Navbar.tsx
+│       ├── Sidebar.tsx
+│       └── Footer.tsx
+│
+├── 📂 hooks/                        # React Hooks
+│   ├── useAuth.ts                   # Authentication
+│   ├── useUser.ts                   # User data
+│   ├── useTasks.ts                  # Task management
+│   └── useFeature.ts                # Feature flags
+│
+├── 📂 config/                       # Configuration
+│   ├── app.config.ts                # App-wide config
+│   ├── features.config.ts           # Feature flags
+│   └── env.ts                       # Environment validation
+│
+├── 📂 lib/                          # External integrations
+│   ├── supabase.ts                  # Supabase setup
+│   ├── analytics.ts                 # Analytics setup
+│   └── sentry.ts                    # Error tracking
+│
+├── 📂 scripts/                      # Scripts
+│   ├── seed-db.ts                   # Database seeding
+│   └── migrate.ts                   # Migrations
+│
+├── 📂 public/                       # Static assets
+│   ├── images/
+│   └── fonts/
+│
+├── .env.local
+├── .gitignore
+├── package.json
+├── tsconfig.json
+├── tailwind.config.ts
+└── next.config.js

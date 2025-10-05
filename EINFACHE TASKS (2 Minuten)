@@ -1,0 +1,3 @@
+INSERT INTO tasks (...) VALUES (...);
+INSERT INTO task_variants (...) VALUES (...);
+-- FERTIG! Refresh Dashboard.

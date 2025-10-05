@@ -1,0 +1,8 @@
+INSERT INTO task_variants (ui_config) VALUES ('{
+  "components": [
+    {"type": "form", "fields": [...]},
+    {"type": "ai_generate", "aiType": "..."},
+    {"type": "comparison_table", "rows": [...]}
+  ]
+}');
+-- FERTIG! Alles data-driven.

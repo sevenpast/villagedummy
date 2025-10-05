@@ -1,0 +1,7 @@
+village-app/
+├── 📂 engine/          # 🔥 CORE: Business Logic
+├── 📂 tasks/           # 📋 TASKS: Task-spezifisch
+├── 📂 features/        # ⚡ FEATURES: Cross-task features
+├── 📂 components/      # 🎨 SHARED: UI components
+├── 📂 hooks/           # 🪝 HOOKS: React hooks
+└── 📂 app/             # 🚪 ROUTING: Next.js routes

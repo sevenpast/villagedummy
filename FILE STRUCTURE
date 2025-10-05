@@ -1,0 +1,17 @@
+village-app/
+├── app/
+│   ├── api/
+│   │   ├── tasks/
+│   │   │   ├── personalized/route.ts       ✅ Lädt Tasks
+│   │   │   └── update-status/route.ts      ✅ Speichert Progress
+│   │   └── ai/
+│   │       └── generate-checklist/route.ts ✅ AI Magic
+│   └── dashboard/
+│       └── page.tsx                         ✅ Beautiful UI
+├── services/
+│   ├── task-service.ts                      ✅ Core Logic
+│   └── ai-service.ts                        ✅ Gemini Integration
+├── scripts/
+│   └── seed-from-excel.ts                   ✅ Excel Migration
+├── .env.local.example                       ✅ Config Template
+└── Module1_Welcome to Switzerland.xlsx      ⚠️ UPDATE MIT TEMPLATE!

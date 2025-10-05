@@ -1,0 +1,11 @@
+-- Erstelle Test-User mit allen Profil-Daten
+INSERT INTO users (id, email, first_name, country_of_origin, municipality, has_kids, arrival_date)
+VALUES (
+  'test-user-id',
+  'test@village.app',
+  'Max',
+  'Germany',
+  'Zurich',
+  true,
+  '2025-10-01'
+);
