@@ -3,7 +3,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { PDFDocument } from 'pdf-lib';
 
 // Use the v1 API endpoint by default
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '', {
+  apiVersion: 'v1'
+});
 
 // Finaler, hochpräziser Prompt für Gemini 1.5 Pro
 const FINAL_GEMINI_PROMPT = `
