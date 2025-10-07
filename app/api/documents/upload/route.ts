@@ -111,10 +111,10 @@ export async function POST(request: NextRequest) {
           finalDocumentType = 'Diplome & Zertifikate';
           finalTags = ['cv', 'resume', 'career'];
           finalConfidence = 0.8;
-        } else if (fileName.includes('diploma') || fileName.includes('degree') || fileName.includes('zeugnis') || fileName.includes('zertifikat') || fileName.includes('schuldiplom')) {
+        } else if (fileName.includes('diploma') || fileName.includes('degree') || fileName.includes('zeugnis') || fileName.includes('zertifikat') || fileName.includes('schuldiplom') || fileName.includes('schuldiplome')) {
           finalDocumentType = 'Diplome & Zertifikate';
           finalTags = ['education', 'certificate', 'diploma'];
-          finalConfidence = 0.8;
+          finalConfidence = 0.9;
         } else if (fileName.includes('contract') || fileName.includes('employment') || fileName.includes('arbeitsvertrag')) {
           finalDocumentType = 'Arbeitsvertrag';
           finalTags = ['employment', 'contract', 'work'];

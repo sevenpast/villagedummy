@@ -39,7 +39,7 @@ class DirectAnalysisService {
     
     // Using gemini-1.5-pro for potentially higher accuracy. 
     // If cost/speed is an issue, this can be switched back to gemini-1.5-flash.
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-pro-latest' });
+    const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
     const prompt = `
 **Rolle:** Du bist ein hochintelligenter Dokumenten-Analyse-Service, der darauf spezialisiert ist, Dokumente für Expatriates in der Schweiz zu verarbeiten.

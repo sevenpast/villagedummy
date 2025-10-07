@@ -32,7 +32,7 @@ export class EnhancedGeminiAnalysisService {
   async analyzeSimpleText(extractedText: string, fileName: string): Promise<EnhancedAnalysisResult> {
     console.log('🔍 Method 1: Simple text analysis');
     
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
     const prompt = `
 **Rolle:** Du bist ein intelligenter Dokumentenanalyse- und Kategorisierungs-Service.
@@ -117,7 +117,7 @@ ${extractedText}
   async analyzeWithConfidence(ocrResult: OCRResult, fileName: string): Promise<EnhancedAnalysisResult> {
     console.log('🔍 Method 2: Confidence-aware analysis');
     
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
     // Identify low-confidence words
     const lowConfidenceWords = ocrResult.words
@@ -201,7 +201,7 @@ ${extractedText}
   async analyzeStructured(structuredResult: StructuredOCRResult, fileName: string): Promise<EnhancedAnalysisResult> {
     console.log('🔍 Method 3: Structured analysis for complex layouts');
     
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
     const prompt = `
 **Rolle:** Du bist ein Experte für die Analyse von Dokumenten-Layouts mit strukturierten OCR-Daten.
