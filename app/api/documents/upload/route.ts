@@ -106,7 +106,11 @@ export async function POST(request: NextRequest) {
           finalDocumentType = 'Reisepass/ID';
           finalTags = ['id', 'identity'];
           finalConfidence = 0.8;
-        } else if (fileName.includes('diploma') || fileName.includes('degree') || fileName.includes('zeugnis') || fileName.includes('zertifikat')) {
+        } else if (fileName.includes('cv') || fileName.includes('resume') || fileName.includes('lebenslauf')) {
+          finalDocumentType = 'Diplome & Zertifikate';
+          finalTags = ['cv', 'resume', 'career'];
+          finalConfidence = 0.8;
+        } else if (fileName.includes('diploma') || fileName.includes('degree') || fileName.includes('zeugnis') || fileName.includes('zertifikat') || fileName.includes('schuldiplom')) {
           finalDocumentType = 'Diplome & Zertifikate';
           finalTags = ['education', 'certificate', 'diploma'];
           finalConfidence = 0.8;

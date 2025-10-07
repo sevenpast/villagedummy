@@ -156,7 +156,7 @@ function generateTextFromFilename(fileName: string): string {
 
 // Step 2: AI Analysis using Gemini (The "Brain")
 async function performAIAnalysis(extractedText: string, fileName: string): Promise<any> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash', apiVersion: 'v1' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
   const prompt = `
 **Rolle:** Du bist ein intelligenter Dokumentenanalyse- und Kategorisierungs-Service in einer SaaS-Anwendung. Deine Aufgabe ist es, den Inhalt von hochgeladenen Dokumenten zu verstehen und sie präzise zu verschlagworten.
@@ -249,7 +249,11 @@ function performFilenameAnalysis(file: File) {
     documentType = 'Reisepass/ID';
     tags = ['id', 'identity'];
     confidence = 0.8;
-  } else if (fileName.includes('diploma') || fileName.includes('degree') || fileName.includes('zeugnis') || fileName.includes('zertifikat')) {
+  } else if (fileName.includes('cv') || fileName.includes('resume') || fileName.includes('lebenslauf')) {
+    documentType = 'Diplome & Zertifikate';
+    tags = ['cv', 'resume', 'career'];
+    confidence = 0.8;
+  } else if (fileName.includes('diploma') || fileName.includes('degree') || fileName.includes('zeugnis') || fileName.includes('zertifikat') || fileName.includes('schuldiplom')) {
     documentType = 'Diplome & Zertifikate';
     tags = ['education', 'certificate', 'diploma'];
     confidence = 0.8;
