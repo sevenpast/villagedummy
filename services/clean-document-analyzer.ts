@@ -413,7 +413,6 @@ export class CleanDocumentAnalyzer {
       '  "isSwissDocument": true|false,\n' +
       '  "extractedText": "all visible text from document"\n' +
       '}';
-`;
 
     try {
       const result = await model.generateContent([
