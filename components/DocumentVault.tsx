@@ -125,13 +125,13 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => 
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = window.document.createElement('a');
         a.href = url;
         a.download = document.fileName;
-        document.body.appendChild(a);
+        window.document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        window.document.body.removeChild(a);
       } else {
         throw new Error('Failed to download document');
       }
@@ -161,13 +161,13 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => 
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = window.document.createElement('a');
         a.href = url;
         a.download = `documents_${userId}_${new Date().toISOString().split('T')[0]}.zip`;
-        document.body.appendChild(a);
+        window.document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        window.document.body.removeChild(a);
         console.log('✅ ZIP download completed successfully');
       } else {
         throw new Error('Failed to download ZIP');

@@ -71,17 +71,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Save document metadata to database
+    // Handle non-UUID user IDs by using null for user_id
+    const insertData = {
+      user_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId) ? userId : null,
+      file_name: file.name,
+      file_type: file.type || `application/${fileExtension}`,
+      file_size: file.size,
+      storage_path: storagePath,
+      document_type: documentType,
+      uploaded_at: new Date().toISOString()
+    };
+
     const { data: dbData, error: dbError } = await supabase
       .from('documents')
-      .insert({
-        user_id: userId,
-        file_name: file.name,
-        file_type: file.type || `application/${fileExtension}`,
-        file_size: file.size,
-        storage_path: storagePath,
-        document_type: documentType,
-        uploaded_at: new Date().toISOString()
-      })
+      .insert(insertData)
       .select()
       .single();
 

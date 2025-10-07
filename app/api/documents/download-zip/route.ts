@@ -23,9 +23,12 @@ export async function POST(request: NextRequest) {
       .select('id, file_name, file_type, file_size, document_type, uploaded_at, storage_path')
       .order('uploaded_at', { ascending: false });
     
-    // Only filter by user_id if it's a valid UUID, otherwise get all documents
+    // Only filter by user_id if it's a valid UUID, otherwise get documents with null user_id
     if (userId && userId !== 'default' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
       query = query.eq('user_id', userId);
+    } else {
+      // For non-UUID user IDs, get documents with null user_id
+      query = query.is('user_id', null);
     }
     
     const { data: documents, error: fetchError } = await query;
