@@ -27,27 +27,37 @@ export class CleanDocumentAnalyzer {
   async analyzeDocument(file: File): Promise<DocumentAnalysisResult> {
     console.log('🔍 Starting clean document analysis for:', file.name);
 
-    // Step 1: Quick filename analysis (fast, reliable)
-    const filenameResult = this.analyzeFilename(file.name);
-    if (filenameResult.confidence >= 0.8) {
-      console.log('✅ High confidence filename match:', filenameResult.documentType);
-      return filenameResult;
-    }
-
-    // Step 2: AI analysis if available (comprehensive)
+    // Direct AI analysis using Gemini 2.0 (OCR + AI only)
     if (this.genAI) {
       try {
         const aiResult = await this.analyzeWithGemini(file);
         console.log('✅ AI analysis completed:', aiResult.documentType);
         return aiResult;
       } catch (error) {
-        console.log('⚠️ AI analysis failed, using filename fallback:', error);
+        console.error('❌ AI analysis failed:', error);
+        // Return error result instead of filename fallback
+        return {
+          documentType: 'Unbekanntes Dokument',
+          confidence: 0.1,
+          tags: ['error', 'ai-failed'],
+          description: `AI analysis failed: ${(error as Error).message}`,
+          extractedText: '',
+          language: 'unknown',
+          isSwissDocument: false,
+        };
       }
     }
 
-    // Step 3: Fallback to filename analysis
-    console.log('📁 Using filename analysis as fallback');
-    return filenameResult;
+    // No AI available
+    return {
+      documentType: 'Unbekanntes Dokument',
+      confidence: 0.1,
+      tags: ['error', 'no-ai'],
+      description: 'AI analysis not available',
+      extractedText: '',
+      language: 'unknown',
+      isSwissDocument: false,
+    };
   }
 
   /**
@@ -348,14 +358,15 @@ export class CleanDocumentAnalyzer {
     const arrayBuffer = await file.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString('base64');
 
+    const fileName = file.name;
     const prompt = `
 **Role:** You are an intelligent document analysis service specialized in Swiss expat documents.
 
 **Task:** Analyze this document image and provide a structured response.
 
 **Available Information:**
-- Filename: ${file.name}
-- Basic PDF info: ${extractedText || 'No text extracted'}
+- Filename: ` + fileName + `
+- Basic PDF info: ` + (extractedText || 'No text extracted') + `
 - Document image: [Provided as base64]
 
 **Instructions:**
@@ -393,7 +404,13 @@ export class CleanDocumentAnalyzer {
 - If you see "Diplom", "Zeugnis", "Zertifikat", "Certificate" → likely diploma/certificate
 - If you see "Arbeitsvertrag", "Contract", "Employment" → likely employment contract
 
-**Response Format (JSON only, no markdown):**
+**CRITICAL: Response Format Requirements:**
+- Return ONLY valid JSON, no markdown, no code blocks, no explanations
+- Start directly with { and end with }
+- No ```json or ``` wrappers
+- No additional text before or after the JSON
+
+**Required JSON Format:**
 {
   "documentType": "exact type from list above",
   "confidence": 0.0-1.0,
@@ -419,8 +436,19 @@ export class CleanDocumentAnalyzer {
       const response = await result.response;
       const text = response.text();
 
-      // Parse JSON response
-      const analysis = JSON.parse(text);
+      // Parse JSON response (handle markdown formatting)
+      let cleanText = text.trim();
+      
+      // Remove markdown code blocks if present
+      if (cleanText.startsWith('```json')) {
+        cleanText = cleanText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanText.startsWith('```')) {
+        cleanText = cleanText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      console.log('🧹 Cleaned Gemini response:', cleanText);
+      
+      const analysis = JSON.parse(cleanText);
       
       return {
         documentType: analysis.documentType || 'Unbekanntes Dokument',
