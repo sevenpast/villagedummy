@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': document.file_type || 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${cleanFileName}"`,
+        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(cleanFileName)}`,
         'Content-Length': arrayBuffer.byteLength.toString(),
       },
     });

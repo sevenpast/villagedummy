@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': document.file_type || 'application/octet-stream',
-        'Content-Disposition': `inline; filename="${cleanFileName}"`,
+        'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(cleanFileName)}`,
         'Content-Length': arrayBuffer.byteLength.toString(),
         'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
       },
