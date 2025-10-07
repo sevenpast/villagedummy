@@ -40,7 +40,7 @@ export class CleanDocumentAnalyzer {
           documentType: 'Unbekanntes Dokument',
           confidence: 0.1,
           tags: ['error', 'ai-failed'],
-          description: `AI analysis failed: ${(error as Error).message}`,
+          description: 'AI analysis failed: ' + (error as Error).message,
           extractedText: '',
           language: 'unknown',
           isSwissDocument: false,
@@ -323,10 +323,10 @@ export class CleanDocumentAnalyzer {
     for (const modelName of modelsToTry) {
       try {
         model = this.genAI.getGenerativeModel({ model: modelName });
-        console.log(`✅ Using Gemini model: ${modelName}`);
+        console.log('✅ Using Gemini model: ' + modelName);
         break;
       } catch (error) {
-        console.log(`❌ Model ${modelName} not available:`, error);
+        console.log('❌ Model ' + modelName + ' not available:', error);
         continue;
       }
     }
@@ -346,10 +346,10 @@ export class CleanDocumentAnalyzer {
       for (let i = 0; i < pages.length; i++) {
         const page = pages[i];
         // Note: pdf-lib doesn't have built-in text extraction, but we can get basic info
-        extractedText += `Page ${i + 1}: PDF Document\n`;
+        extractedText += 'Page ' + (i + 1) + ': PDF Document\n';
       }
       
-      console.log(`📄 Extracted basic info from ${pages.length} pages`);
+      console.log('📄 Extracted basic info from ' + pages.length + ' pages');
     } catch (error) {
       console.log('⚠️ PDF text extraction failed, using image analysis:', error);
     }
@@ -460,7 +460,7 @@ export class CleanDocumentAnalyzer {
         stack: (error as Error).stack,
         name: (error as Error).name
       });
-      throw new Error(`AI analysis failed: ${(error as Error).message}`);
+      throw new Error('AI analysis failed: ' + (error as Error).message);
     }
   }
 }
