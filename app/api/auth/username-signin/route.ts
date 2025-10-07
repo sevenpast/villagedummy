@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+// Check if Supabase is properly configured
+if (!supabase) {
+  console.warn('⚠️ Supabase not configured - using demo mode for authentication')
+}
+
 // USER-FRIENDLY: Username-based authentication with email fallback
 export async function POST(request: NextRequest) {
   try {
@@ -21,6 +26,38 @@ export async function POST(request: NextRequest) {
         { error: 'Password must be at least 6 characters long' },
         { status: 400 }
       )
+    }
+
+    // Check if Supabase is configured
+    if (!supabase) {
+      // Demo mode - simulate authentication
+      const demoUser = {
+        id: `user_${Date.now()}`,
+        auth_user_id: `auth_${Date.now()}`,
+        username: username,
+        email: username.includes('@') ? username : `${username}@demo.local`,
+        first_name: username.charAt(0).toUpperCase() + username.slice(1),
+        last_name: 'User',
+        country_of_origin: 'DE',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        last_login_at: new Date().toISOString(),
+      }
+
+      return NextResponse.json({
+        success: true,
+        user: demoUser,
+        session: {
+          access_token: `demo_token_${Date.now()}`,
+          refresh_token: `demo_refresh_${Date.now()}`,
+          expires_at: Date.now() + 3600000,
+          user: {
+            id: demoUser.auth_user_id,
+            email: demoUser.email
+          }
+        },
+        message: 'Login successful (DEMO MODE)'
+      })
     }
 
     // Check if username is an email or regular username
