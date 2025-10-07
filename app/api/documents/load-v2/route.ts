@@ -17,12 +17,12 @@ export async function GET(request: NextRequest) {
 
     console.log(`📁 Loading documents for user: ${userId}`);
 
-    // Load documents from the new schema
+    // Load documents from existing schema
     const { data: documents, error } = await supabase
       .from('documents')
-      .select('id, storage_path, mime_type, size_bytes, status, primary_tag, confidence, signals, created_at, updated_at')
+      .select('id, file_name, file_size, file_type, storage_path, document_type, status, confidence, signals, uploaded_at')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order('uploaded_at', { ascending: false });
 
     if (error) {
       console.error('❌ Database error:', error);
@@ -32,11 +32,11 @@ export async function GET(request: NextRequest) {
     // Transform to match frontend expectations
     const transformedDocuments = documents?.map(doc => ({
       id: doc.id,
-      fileName: doc.storage_path.split('/').pop() || 'Unknown',
-      fileType: doc.mime_type,
-      fileSize: doc.size_bytes,
-      documentType: doc.primary_tag || 'Unknown',
-      uploadedAt: doc.created_at,
+      fileName: doc.file_name,
+      fileType: doc.file_type,
+      fileSize: doc.file_size,
+      documentType: doc.document_type || 'Unknown',
+      uploadedAt: doc.uploaded_at,
       storagePath: doc.storage_path,
       status: doc.status,
       confidence: doc.confidence,

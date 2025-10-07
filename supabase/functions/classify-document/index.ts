@@ -204,11 +204,11 @@ serve(async (req) => {
       ocr_length: ocrText.length
     };
 
-    // Update document
+    // Update document (using existing schema)
     const update: Record<string, unknown> = {
-      primary_tag: best.label,
+      document_type: best.label,
       confidence: best.score,
-      secondary_tags: [],
+      tags: [best.label], // Use existing tags column
       signals,
       status: "done",
       error_message: null

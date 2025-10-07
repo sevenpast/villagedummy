@@ -29,15 +29,15 @@ export async function POST(request: NextRequest) {
 
     console.log(`📄 Uploading: ${file.name} to ${storagePath}`);
 
-    // 1. Insert document record first
+    // 1. Insert document record first (using existing schema)
     const { data: document, error: dbError } = await supabase
       .from('documents')
       .insert({
         user_id: userId,
-        storage_bucket: 'documents',
+        file_name: file.name,
+        file_size: file.size,
+        file_type: file.type || `application/${fileExtension}`,
         storage_path: storagePath,
-        mime_type: file.type || `application/${fileExtension}`,
-        size_bytes: file.size,
         status: 'uploaded'
       })
       .select()
