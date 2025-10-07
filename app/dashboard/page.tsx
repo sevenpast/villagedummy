@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [children, setChildren] = useState<any[]>([]);
   const [profileFormData, setProfileFormData] = useState<any>({});
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Calculate actual profile completeness
   const calculateProfileCompleteness = (userData: any) => {
@@ -57,24 +58,85 @@ export default function DashboardPage() {
     return Math.round((completedSections / totalSections) * 100);
   };
 
-  useEffect(() => {
-    const currentUser = localStorage.getItem('village_current_user');
-    if (!currentUser) {
-      router.push('/signin');
-      return;
-    }
-
+  // Secure logout function
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    
     try {
-      const userData = JSON.parse(currentUser);
-      setUser(userData);
-      setFormData(userData);
-
-      loadUserDocuments(userData);
-      loadTasks(userData);
+      const accessToken = localStorage.getItem('village_access_token');
+      
+      if (accessToken) {
+        // Call logout API
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
     } catch (error) {
-      console.error('Error parsing user data:', error);
+      console.error('Logout error:', error);
+    } finally {
+      // Clear all local storage
+      localStorage.removeItem('village_current_user');
+      localStorage.removeItem('village_session');
+      localStorage.removeItem('village_access_token');
+      localStorage.removeItem('village_task_progress');
+      localStorage.removeItem('village_children');
+      
+      // Redirect to signin
       router.push('/signin');
+      setIsLoggingOut(false);
     }
+  };
+
+  useEffect(() => {
+    // Validate session and load user data
+    const validateAndLoadUser = async () => {
+      const currentUser = localStorage.getItem('village_current_user');
+      const accessToken = localStorage.getItem('village_access_token');
+      
+      if (!currentUser || !accessToken) {
+        router.push('/signin');
+        return;
+      }
+
+      try {
+        // Validate session with server
+        const response = await fetch('/api/auth/validate-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ accessToken }),
+        });
+
+        if (!response.ok) {
+          // Session invalid, clear storage and redirect
+          localStorage.removeItem('village_current_user');
+          localStorage.removeItem('village_session');
+          localStorage.removeItem('village_access_token');
+          router.push('/signin');
+          return;
+        }
+
+        const data = await response.json();
+        if (data.success && data.user) {
+          setUser(data.user);
+          setFormData(data.user);
+          loadUserDocuments(data.user);
+          loadTasks(data.user);
+        } else {
+          router.push('/signin');
+        }
+      } catch (error) {
+        console.error('Session validation error:', error);
+        router.push('/signin');
+      }
+    };
+
+    validateAndLoadUser();
   }, [router]);
 
   // Listen for task completion messages from child windows
@@ -418,6 +480,13 @@ export default function DashboardPage() {
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm"
               >
                 Profile Settings
+              </button>
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm disabled:opacity-50"
+              >
+                {isLoggingOut ? 'Logging out...' : 'Logout'}
               </button>
               <span className="text-sm text-gray-700">Welcome, {user.first_name}!</span>
             </div>
