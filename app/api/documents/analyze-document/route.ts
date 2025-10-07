@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const mimeType = file.type || 'application/pdf';
 
     // Initialize Gemini model
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
     // Create comprehensive prompt for document analysis
     const prompt = `

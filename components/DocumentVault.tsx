@@ -46,8 +46,8 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => 
             documentType: doc.document_type,
             uploadedAt: doc.uploaded_at,
             storagePath: doc.storage_path,
-            tags: doc.tags || ['unrecognized'],
-            confidence: doc.confidence || 0.5,
+            tags: ['unrecognized'],
+            confidence: 0.5,
           })));
         }
       }
@@ -68,33 +68,42 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => 
         const file = files[i];
         setUploadProgress(`Uploading ${file.name}...`);
 
-        // Step 1: Intelligent document analysis with Gemini
-        setUploadProgress(`Analyzing ${file.name}...`);
+        // Step 1: Basic document type detection (Gemini temporarily disabled)
+        setUploadProgress(`Processing ${file.name}...`);
         
-        const analysisFormData = new FormData();
-        analysisFormData.append('file', file);
-        analysisFormData.append('fileName', file.name);
-
-        const analysisResponse = await fetch('/api/documents/analyze-document', {
-          method: 'POST',
-          body: analysisFormData,
-        });
-
         let documentType = 'Other';
         let tags = ['unrecognized'];
         let confidence = 0.5;
 
-        if (analysisResponse.ok) {
-          const analysisResult = await analysisResponse.json();
-          if (analysisResult.success && analysisResult.analysis) {
-            documentType = analysisResult.analysis.documentType;
-            tags = analysisResult.analysis.tags || ['unrecognized'];
-            confidence = analysisResult.analysis.confidence || 0.5;
-            console.log(`✅ Document analyzed: ${documentType} (confidence: ${confidence})`);
-          }
-        } else {
-          console.warn('⚠️ Document analysis failed, using fallback');
+        // Basic filename-based detection
+        const fileName = file.name.toLowerCase();
+        if (fileName.includes('passport') || fileName.includes('pass') || fileName.includes('reisepass')) {
+          documentType = 'Passport';
+          tags = ['passport', 'identity'];
+          confidence = 0.8;
+        } else if (fileName.includes('id') || fileName.includes('identity')) {
+          documentType = 'ID Card';
+          tags = ['id', 'identity'];
+          confidence = 0.8;
+        } else if (fileName.includes('diploma') || fileName.includes('degree') || fileName.includes('zeugnis')) {
+          documentType = 'Education Certificate';
+          tags = ['education', 'certificate'];
+          confidence = 0.8;
+        } else if (fileName.includes('contract') || fileName.includes('employment')) {
+          documentType = 'Employment Contract';
+          tags = ['employment', 'contract'];
+          confidence = 0.8;
+        } else if (fileName.includes('birth') || fileName.includes('geburt')) {
+          documentType = 'Birth Certificate';
+          tags = ['birth', 'certificate'];
+          confidence = 0.8;
+        } else if (fileName.includes('marriage') || fileName.includes('heirat')) {
+          documentType = 'Marriage Certificate';
+          tags = ['marriage', 'certificate'];
+          confidence = 0.8;
         }
+
+        console.log(`✅ Document type detected: ${documentType} (confidence: ${confidence})`);
 
         setUploadProgress(`Uploading ${file.name}...`);
 

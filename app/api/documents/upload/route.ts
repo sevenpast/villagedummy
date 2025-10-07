@@ -101,8 +101,6 @@ export async function POST(request: NextRequest) {
       file_size: file.size,
       storage_path: storagePath,
       document_type: finalDocumentType,
-      tags: parsedTags,
-      confidence: parsedConfidence,
       uploaded_at: new Date().toISOString()
     };
 
