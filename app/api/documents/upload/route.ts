@@ -62,12 +62,13 @@ export async function POST(request: NextRequest) {
     
     if (!finalDocumentType) {
       try {
-        // Call hybrid OCR + AI analysis API
+        // Call enhanced hybrid OCR + AI analysis API
         const analysisFormData = new FormData();
         analysisFormData.append('file', file);
         analysisFormData.append('userId', userId);
+        analysisFormData.append('method', 'auto'); // Use auto method to try all approaches
 
-        const analysisResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/documents/hybrid-analysis`, {
+        const analysisResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/documents/enhanced-hybrid-analysis`, {
           method: 'POST',
           body: analysisFormData,
         });
