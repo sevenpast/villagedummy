@@ -25,6 +25,7 @@ const PASSPORT_WORDS = /(passport|reisepass|passeport|passaporto)/i;
 const ID_WORDS = /(identity|ausweis|identité|carta d'identità)/i;
 const CONTRACT_WORDS = /(contract|vertrag|contrat|contratto)/i;
 const RESUME_WORDS = /(resume|cv|curriculum|lebenslauf)/i;
+const DIPLOMA_WORDS = /(diploma|zeugnis|zertifikat|certificate|schuldiplom|schulzeugnis)/i;
 
 function heuristicLabel(ocr: string, mime: string, filename: string): { label: string; score: number; signal: string } {
   const txt = (ocr || "").toLowerCase();
@@ -40,6 +41,7 @@ function heuristicLabel(ocr: string, mime: string, filename: string): { label: s
   if (RECEIPT_WORDS.test(txt) || fname.includes("receipt")) return { label: "receipt", score: 0.8, signal: "receipt_word" };
   if (CONTRACT_WORDS.test(txt) || fname.includes("contract")) return { label: "contract", score: 0.8, signal: "contract_word" };
   if (RESUME_WORDS.test(txt) || fname.includes("cv") || fname.includes("resume")) return { label: "resume", score: 0.8, signal: "resume_word" };
+  if (DIPLOMA_WORDS.test(txt) || fname.includes("diplom") || fname.includes("zeugnis") || fname.includes("zertifikat")) return { label: "diploma", score: 0.9, signal: "diploma_word" };
   if (IBAN_REGEX.test(txt)) return { label: "bank_statement", score: 0.75, signal: "iban" };
   
   // Low confidence fallbacks
@@ -51,11 +53,11 @@ function heuristicLabel(ocr: string, mime: string, filename: string): { label: s
 
 // --- Gemini REST call (multimodal)
 async function classifyWithGemini(base64Data: string, mimeType: string, ocrText?: string): Promise<GeminiResp> {
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(GEMINI_KEY)}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${encodeURIComponent(GEMINI_KEY)}`;
   
   const systemPrompt = `You are a strict document classifier for Swiss documents. Allowed labels:
 ["passport","id_card","driver_license","invoice","receipt","bank_statement",
- "payslip","utility_bill","contract","resume","insurance_card","tax_form","unknown"]
+ "payslip","utility_bill","contract","resume","diploma","insurance_card","tax_form","unknown"]
 
 Return ONLY compact JSON: {"label":"<string>","confidence":<0..1>,"reasons":["<string>"]}.
 If uncertain, use "unknown". No extra text.`;
@@ -99,7 +101,7 @@ If uncertain, use "unknown". No extra text.`;
 
 // --- Extract text with Gemini (lightweight OCR)
 async function extractTextWithGemini(base64Data: string, mimeType: string): Promise<string> {
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(GEMINI_KEY)}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${encodeURIComponent(GEMINI_KEY)}`;
   
   const body = {
     contents: [{

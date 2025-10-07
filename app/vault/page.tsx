@@ -53,25 +53,11 @@ export default function VaultPage() {
 
   const loadDocuments = async () => {
     try {
-      const response = await fetch(`/api/documents/load?userId=${userId}`);
+      const response = await fetch(`/api/documents/load-v2?userId=${userId}`);
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.documents) {
-          setDocuments(data.documents.map((doc: any) => ({
-            id: doc.id,
-            fileName: doc.file_name,
-            fileType: doc.file_type,
-            fileSize: doc.file_size,
-            documentType: doc.document_type,
-            uploadedAt: doc.uploaded_at,
-            storagePath: doc.storage_path,
-            tags: doc.tags || ['unrecognized'],
-            confidence: doc.confidence || 0.5,
-            description: doc.description || '',
-            language: doc.language || 'DE',
-            isSwissDocument: doc.is_swiss_document || true,
-          })));
-        }
+        // v2 API returns documents directly as array
+        setDocuments(data || []);
       }
     } catch (error) {
       console.error('Failed to load documents:', error);
@@ -96,7 +82,7 @@ export default function VaultPage() {
         formData.append('userId', userId);
         // Don't provide documentType, tags, or confidence - let the server analyze intelligently
 
-        const response = await fetch('/api/documents/upload', {
+        const response = await fetch('/api/documents/upload-v2', {
           method: 'POST',
           body: formData,
         });
@@ -235,6 +221,7 @@ export default function VaultPage() {
   const translateDocumentType = (documentType: string): string => {
     const translations: { [key: string]: string } = {
       'Diplome & Zertifikate': 'Diplomas & Certificates',
+      'diploma': 'Diplomas & Certificates',
       'Reisepass/ID': 'Passport/ID',
       'Arbeitsvertrag': 'Employment Contract',
       'Mietvertrag': 'Rental Agreement',
