@@ -225,6 +225,66 @@ export class CleanDocumentAnalyzer {
       };
     }
 
+    if (lowerName.includes('anmeldung') || lowerName.includes('registration') || lowerName.includes('schule') || lowerName.includes('kindergarten')) {
+      return {
+        documentType: 'Rechnungen',
+        confidence: 0.8,
+        tags: ['registration', 'school', 'form'],
+        description: 'Registration or school form',
+        language: 'DE',
+        isSwissDocument: true,
+        extractedText: ''
+      };
+    }
+
+    if (lowerName.includes('arbeitszeugnis') || lowerName.includes('work') || lowerName.includes('employment')) {
+      return {
+        documentType: 'Arbeitsvertrag',
+        confidence: 0.8,
+        tags: ['work', 'employment', 'reference'],
+        description: 'Work reference or employment document',
+        language: 'DE',
+        isSwissDocument: true,
+        extractedText: ''
+      };
+    }
+
+    if (lowerName.includes('krankenkasse') || lowerName.includes('health') || lowerName.includes('versicherung')) {
+      return {
+        documentType: 'Versicherungsunterlagen',
+        confidence: 0.8,
+        tags: ['insurance', 'health', 'coverage'],
+        description: 'Health insurance document',
+        language: 'DE',
+        isSwissDocument: true,
+        extractedText: ''
+      };
+    }
+
+    if (lowerName.includes('steuer') || lowerName.includes('tax') || lowerName.includes('finanzamt')) {
+      return {
+        documentType: 'Steuerdokumente',
+        confidence: 0.8,
+        tags: ['tax', 'financial', 'government'],
+        description: 'Tax document',
+        language: 'DE',
+        isSwissDocument: true,
+        extractedText: ''
+      };
+    }
+
+    if (lowerName.includes('bank') || lowerName.includes('konto') || lowerName.includes('finanz')) {
+      return {
+        documentType: 'Bankdokumente',
+        confidence: 0.8,
+        tags: ['banking', 'account', 'financial'],
+        description: 'Banking document',
+        language: 'DE',
+        isSwissDocument: true,
+        extractedText: ''
+      };
+    }
+
     // Low confidence fallback
     return {
       documentType: 'Unbekanntes Dokument',
@@ -245,7 +305,7 @@ export class CleanDocumentAnalyzer {
       throw new Error('Gemini AI not initialized');
     }
 
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     // Convert file to base64
     const arrayBuffer = await file.arrayBuffer();
