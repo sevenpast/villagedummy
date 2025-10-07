@@ -166,7 +166,7 @@ export default function VaultPage() {
 
     try {
       const response = await fetch('/api/documents/delete', {
-        method: 'POST',
+        method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -174,7 +174,8 @@ export default function VaultPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete document');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete document');
       }
 
       console.log('Document deleted successfully');
@@ -199,8 +200,10 @@ export default function VaultPage() {
         a.click();
         window.URL.revokeObjectURL(url);
         window.document.body.removeChild(a);
+        console.log(`✅ Downloaded: ${document.fileName}`);
       } else {
-        throw new Error('Failed to download document');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to download document');
       }
     } catch (error) {
       console.error('Download failed:', error);
