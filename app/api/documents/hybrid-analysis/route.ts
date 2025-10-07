@@ -6,11 +6,13 @@ import { PDFDocument } from 'pdf-lib';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '');
 
 export async function POST(request: NextRequest) {
+  let file: File | null = null;
+  
   try {
     console.log('🔍 Starting hybrid OCR + AI document analysis...');
 
     const formData = await request.formData();
-    const file = formData.get('file') as File;
+    file = formData.get('file') as File;
     const userId = formData.get('userId') as string;
 
     if (!file) {
@@ -56,12 +58,11 @@ export async function POST(request: NextRequest) {
     console.error('❌ Hybrid analysis error:', error);
     
     // Fallback to filename analysis
-    try {
-      const formData = await request.formData();
-      const file = formData.get('file') as File;
+    if (file) {
+      console.log('🔄 Falling back to filename analysis...');
       return performFilenameAnalysis(file);
-    } catch (fallbackError) {
-      console.error('❌ Fallback analysis also failed:', fallbackError);
+    } else {
+      console.error('❌ No file available for fallback analysis');
       return NextResponse.json(
         { error: 'Document analysis failed' },
         { status: 500 }
@@ -155,7 +156,7 @@ function generateTextFromFilename(fileName: string): string {
 
 // Step 2: AI Analysis using Gemini (The "Brain")
 async function performAIAnalysis(extractedText: string, fileName: string): Promise<any> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash', apiVersion: 'v1' });
 
   const prompt = `
 **Rolle:** Du bist ein intelligenter Dokumentenanalyse- und Kategorisierungs-Service in einer SaaS-Anwendung. Deine Aufgabe ist es, den Inhalt von hochgeladenen Dokumenten zu verstehen und sie präzise zu verschlagworten.
