@@ -7,15 +7,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { 
-      email, password, first_name, last_name, country_of_origin, 
+      username, email, password, first_name, last_name, country_of_origin, 
       gender, nationality, birth_place, german_skills, first_language, family_language,
       municipality, canton, postal_code, has_kids, num_children 
     } = body
 
-    // Validate required fields - only email, password and first_name are required
-    if (!email || !password || !first_name) {
+    // Validate required fields - username, email, password and first_name are required
+    if (!username || !email || !password || !first_name) {
       return NextResponse.json(
-        { error: 'Missing required fields: email, password, and name' },
+        { error: 'Missing required fields: username, email, password, and name' },
         { status: 400 }
       )
     }
@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     const user = {
       id: `user_${Date.now()}`,
       auth_user_id: `auth_${Date.now()}`,
+      username,
       email,
       first_name,
       last_name: last_name || null,

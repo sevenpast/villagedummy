@@ -9,7 +9,9 @@ import EUStatusIndicator from '../../components/EUStatusIndicator';
 export default function SignUpPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
+    username: '',
     name: '',
+    email: '',
     password: '',
     countryOfOrigin: '',
     gender: '',
@@ -95,7 +97,8 @@ export default function SignUpPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: `${formData.name.toLowerCase().replace(' ', '.')}@example.com`,
+          username: formData.username,
+          email: formData.email,
           password: formData.password,
           first_name: formData.name.split(' ')[0] || formData.name,
           last_name: formData.name.split(' ').slice(1).join(' ') || '',
@@ -155,8 +158,23 @@ export default function SignUpPage() {
               <h3 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
               <div className="space-y-4">
                 <div>
+                  <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                    Username *
+                  </label>
+                  <input
+                    id="username"
+                    name="username"
+                    type="text"
+                    required
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 border-gray-300"
+                    placeholder="Choose a username"
+                  />
+                </div>
+                <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                    Name *
+                    Full Name *
                   </label>
                   <input
                     id="name"
@@ -167,6 +185,21 @@ export default function SignUpPage() {
                     onChange={handleInputChange}
                     className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 border-gray-300"
                     placeholder="Enter your full name"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                    Email *
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 border-gray-300"
+                    placeholder="Enter your email address"
                   />
                 </div>
                 <div>

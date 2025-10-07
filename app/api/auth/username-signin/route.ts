@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-// SECURE: Real Supabase authentication with proper validation
+// USER-FRIENDLY: Username-based authentication with email fallback
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -15,10 +15,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Convert username to email format for Supabase Auth
-    // This allows users to login with username while maintaining email-based auth
-    const email = username.includes('@') ? username : `${username}@village.local`
-
     // Validate password strength
     if (password.length < 6) {
       return NextResponse.json(
@@ -27,7 +23,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Sign in with Supabase Auth
+    // Check if username is an email or regular username
+    const isEmail = username.includes('@')
+    let email = username
+
+    if (!isEmail) {
+      // For usernames, we need to find the user in our database first
+      // to get their associated email address
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('email, auth_user_id')
+        .eq('username', username)
+        .single()
+
+      if (userError || !userData) {
+        return NextResponse.json(
+          { error: 'Invalid username or password' },
+          { status: 401 }
+        )
+      }
+
+      email = userData.email
+    }
+
+    // Sign in with Supabase Auth using the email
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -36,7 +55,7 @@ export async function POST(request: NextRequest) {
     if (authError) {
       console.error('Auth error:', authError)
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { error: 'Invalid username or password' },
         { status: 401 }
       )
     }
