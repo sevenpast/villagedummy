@@ -184,11 +184,15 @@ ${extractedText.substring(0, 4000)}${extractedText.length > 4000 ? '...' : ''}
     console.error('❌ Intelligent document analysis failed:', error);
     
     // Fallback to filename-based analysis
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    
-    if (file) {
-      return await fallbackAnalysis(file.name);
+    try {
+      const formData = await request.formData();
+      const file = formData.get('file') as File;
+      
+      if (file) {
+        return await fallbackAnalysis(file.name);
+      }
+    } catch (formError) {
+      console.error('❌ Could not read form data for fallback:', formError);
     }
     
     return NextResponse.json({

@@ -146,6 +146,7 @@ export async function POST(request: NextRequest) {
 
     // Save document metadata to database with AI analysis results
     // Handle non-UUID user IDs by using null for user_id
+    // Temporarily use basic structure until database schema is updated
     const insertData = {
       user_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId) ? userId : null,
       file_name: file.name,
@@ -153,12 +154,6 @@ export async function POST(request: NextRequest) {
       file_size: file.size,
       storage_path: storagePath,
       document_type: finalDocumentType,
-      tags: parsedTags,
-      confidence: parsedConfidence,
-      description: `AI-analyzed document: ${finalDocumentType}`,
-      language: 'DE',
-      is_swiss_document: true,
-      extracted_text: '',
       uploaded_at: new Date().toISOString()
     };
 
