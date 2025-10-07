@@ -226,7 +226,7 @@ export class CleanDocumentAnalyzer {
       };
     }
 
-    if (lowerName.includes('anmeldung') || lowerName.includes('registration') || lowerName.includes('schule') || lowerName.includes('kindergarten')) {
+    if (lowerName.includes('anmeldung') || lowerName.includes('registration') || lowerName.includes('schule') || lowerName.includes('kindergarten') || lowerName.includes('form')) {
       return {
         documentType: 'Rechnungen',
         confidence: 0.8,
@@ -306,7 +306,24 @@ export class CleanDocumentAnalyzer {
       throw new Error('Gemini AI not initialized');
     }
 
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    // Try different Gemini models in order of preference
+    let model;
+    const modelsToTry = ['gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+    
+    for (const modelName of modelsToTry) {
+      try {
+        model = this.genAI.getGenerativeModel({ model: modelName });
+        console.log(`✅ Using Gemini model: ${modelName}`);
+        break;
+      } catch (error) {
+        console.log(`❌ Model ${modelName} not available:`, error);
+        continue;
+      }
+    }
+    
+    if (!model) {
+      throw new Error('No Gemini model available');
+    }
 
     // Step 1: Extract text from PDF using pdf-lib
     let extractedText = '';
@@ -415,8 +432,13 @@ export class CleanDocumentAnalyzer {
         extractedText: analysis.extractedText || ''
       };
     } catch (error) {
-      console.error('Gemini analysis error:', error);
-      throw new Error('AI analysis failed');
+      console.error('❌ Gemini analysis error:', error);
+      console.error('❌ Error details:', {
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+        name: (error as Error).name
+      });
+      throw new Error(`AI analysis failed: ${(error as Error).message}`);
     }
   }
 }
