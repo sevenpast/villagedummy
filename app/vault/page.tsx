@@ -431,13 +431,13 @@ export default function VaultPage() {
                 <div className="flex-1 p-4 overflow-auto">
                   {selectedDocument.fileType.startsWith('image/') ? (
                     <img
-                      src={`https://uhnwfpenbkxgdkhkansu.supabase.co/storage/v1/object/public/documents/${selectedDocument.storagePath}`}
+                      src={`/api/documents/preview?documentId=${selectedDocument.id}&userId=${userId}`}
                       alt={selectedDocument.fileName}
                       className="max-w-full h-auto mx-auto"
                     />
                   ) : selectedDocument.fileType === 'application/pdf' ? (
                     <iframe
-                      src={`https://uhnwfpenbkxgdkhkansu.supabase.co/storage/v1/object/public/documents/${selectedDocument.storagePath}`}
+                      src={`/api/documents/preview?documentId=${selectedDocument.id}&userId=${userId}`}
                       className="w-full h-full"
                       title={selectedDocument.fileName}
                     />
