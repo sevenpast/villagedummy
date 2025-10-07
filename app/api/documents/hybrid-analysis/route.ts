@@ -3,7 +3,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { PDFDocument } from 'pdf-lib';
 
 // Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '');
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '', {
+  apiVersion: 'v1'
+});
 
 export async function POST(request: NextRequest) {
   let file: File | null = null;
@@ -92,9 +94,16 @@ async function extractTextFromDocument(file: File): Promise<string> {
         const { width, height } = page.getSize();
         
         // Try to extract text using PDF-lib's text extraction
-        // Note: This is a simplified approach - for better OCR, we'd use Tesseract.js
-        // For now, we'll use the filename and basic PDF metadata
-        extractedText += `Page ${i + 1}: PDF Document (${width}x${height})\n`;
+        try {
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item: any) => item.str)
+            .join(' ');
+          extractedText += pageText + '\n';
+        } catch (textError) {
+          // If text extraction fails, add page info
+          extractedText += `Page ${i + 1}: PDF Document (${width}x${height})\n`;
+        }
       }
       
       // If we got very little text, use filename analysis
@@ -127,18 +136,20 @@ function generateTextFromFilename(fileName: string): string {
   // Create a rich text description based on filename patterns
   let textDescription = `Document filename: ${fileName}\n\n`;
   
-  if (lowerFileName.includes('zertifikat') || lowerFileName.includes('certificate')) {
+  if (lowerFileName.includes('cv') || lowerFileName.includes('resume') || lowerFileName.includes('lebenslauf')) {
+    textDescription += `This appears to be a CV or resume document. The filename contains "cv", "resume", or "lebenslauf" which indicates a professional curriculum vitae or resume.`;
+  } else if (lowerFileName.includes('zertifikat') || lowerFileName.includes('certificate')) {
     textDescription += `This appears to be a certificate document. The filename contains "certificate" or "zertifikat" which indicates educational or professional certification.`;
-  } else if (lowerFileName.includes('diplom') || lowerFileName.includes('diploma')) {
-    textDescription += `This appears to be a diploma document. The filename contains "diploma" or "diplom" which indicates an educational degree or qualification.`;
+  } else if (lowerFileName.includes('diplom') || lowerFileName.includes('diploma') || lowerFileName.includes('schuldiplom')) {
+    textDescription += `This appears to be a diploma document. The filename contains "diploma", "diplom", or "schuldiplom" which indicates an educational degree or qualification.`;
   } else if (lowerFileName.includes('zeugnis') || lowerFileName.includes('transcript')) {
     textDescription += `This appears to be a transcript or certificate document. The filename contains "zeugnis" or "transcript" which indicates academic records.`;
   } else if (lowerFileName.includes('pass') || lowerFileName.includes('passport')) {
     textDescription += `This appears to be a passport or identity document. The filename contains "pass" or "passport" which indicates travel or identity documentation.`;
   } else if (lowerFileName.includes('id') || lowerFileName.includes('identity')) {
     textDescription += `This appears to be an identity document. The filename contains "id" or "identity" which indicates personal identification.`;
-  } else if (lowerFileName.includes('contract') || lowerFileName.includes('vertrag')) {
-    textDescription += `This appears to be a contract document. The filename contains "contract" or "vertrag" which indicates a legal agreement.`;
+  } else if (lowerFileName.includes('contract') || lowerFileName.includes('vertrag') || lowerFileName.includes('arbeitsvertrag')) {
+    textDescription += `This appears to be a contract document. The filename contains "contract", "vertrag", or "arbeitsvertrag" which indicates a legal agreement.`;
   } else if (lowerFileName.includes('rental') || lowerFileName.includes('miete')) {
     textDescription += `This appears to be a rental agreement. The filename contains "rental" or "miete" which indicates housing documentation.`;
   } else if (lowerFileName.includes('insurance') || lowerFileName.includes('versicherung')) {
@@ -147,6 +158,16 @@ function generateTextFromFilename(fileName: string): string {
     textDescription += `This appears to be a birth certificate. The filename contains "birth" or "geburt" which indicates vital records.`;
   } else if (lowerFileName.includes('marriage') || lowerFileName.includes('heirat')) {
     textDescription += `This appears to be a marriage certificate. The filename contains "marriage" or "heirat" which indicates marital documentation.`;
+  } else if (lowerFileName.includes('salary') || lowerFileName.includes('lohn') || lowerFileName.includes('gehalt')) {
+    textDescription += `This appears to be a salary or payroll document. The filename contains "salary", "lohn", or "gehalt" which indicates employment compensation.`;
+  } else if (lowerFileName.includes('bank') || lowerFileName.includes('konto')) {
+    textDescription += `This appears to be a banking document. The filename contains "bank" or "konto" which indicates financial documentation.`;
+  } else if (lowerFileName.includes('tax') || lowerFileName.includes('steuer')) {
+    textDescription += `This appears to be a tax document. The filename contains "tax" or "steuer" which indicates fiscal documentation.`;
+  } else if (lowerFileName.includes('medical') || lowerFileName.includes('medizin')) {
+    textDescription += `This appears to be a medical document. The filename contains "medical" or "medizin" which indicates healthcare documentation.`;
+  } else if (lowerFileName.includes('permit') || lowerFileName.includes('bewilligung')) {
+    textDescription += `This appears to be a permit or authorization document. The filename contains "permit" or "bewilligung" which indicates official authorization.`;
   } else {
     textDescription += `This is a document with filename "${fileName}". The document type needs to be determined based on the filename pattern.`;
   }
@@ -156,7 +177,19 @@ function generateTextFromFilename(fileName: string): string {
 
 // Step 2: AI Analysis using Gemini (The "Brain")
 async function performAIAnalysis(extractedText: string, fileName: string): Promise<any> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  // Try different Gemini models for better compatibility
+  let model;
+  try {
+    model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  } catch (error) {
+    console.log('⚠️ gemini-1.5-flash failed, trying gemini-1.5-pro');
+    try {
+      model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    } catch (error2) {
+      console.log('⚠️ gemini-1.5-pro failed, trying gemini-1.0-pro');
+      model = genAI.getGenerativeModel({ model: 'gemini-1.0-pro' });
+    }
+  }
 
   const prompt = `
 **Rolle:** Du bist ein intelligenter Dokumentenanalyse- und Kategorisierungs-Service in einer SaaS-Anwendung. Deine Aufgabe ist es, den Inhalt von hochgeladenen Dokumenten zu verstehen und sie präzise zu verschlagworten.
