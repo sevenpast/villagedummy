@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Upload, File, Trash2, Download, Eye, Tag } from 'lucide-react';
+import { ArrowLeft, Upload, File, Trash2, Download, Eye, Tag, Edit2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Document {
@@ -28,6 +28,9 @@ export default function VaultPage() {
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [customTag, setCustomTag] = useState('');
+  const [editingTag, setEditingTag] = useState<string | null>(null);
+  const [editTagValue, setEditTagValue] = useState('');
 
   useEffect(() => {
     // Get user ID from localStorage or session
@@ -93,6 +96,10 @@ export default function VaultPage() {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('userId', userId);
+        // Add custom tag if provided
+        if (customTag.trim()) {
+          formData.append('customTag', customTag.trim());
+        }
         // Don't provide documentType, tags, or confidence - let the server analyze intelligently
 
         const response = await fetch('/api/documents/upload', {
@@ -230,6 +237,51 @@ export default function VaultPage() {
     return new Date(dateString).toLocaleDateString();
   };
 
+  const startEditingTag = (documentId: string, currentTag: string) => {
+    setEditingTag(documentId);
+    setEditTagValue(currentTag);
+  };
+
+  const cancelEditingTag = () => {
+    setEditingTag(null);
+    setEditTagValue('');
+  };
+
+  const saveTag = async (documentId: string) => {
+    try {
+      const response = await fetch('/api/documents/update-tag', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          documentId, 
+          userId, 
+          newTag: editTagValue.trim() 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update tag');
+      }
+
+      // Update the document in the local state
+      setDocuments(prevDocs => 
+        prevDocs.map(doc => 
+          doc.id === documentId 
+            ? { ...doc, documentType: editTagValue.trim() }
+            : doc
+        )
+      );
+
+      setEditingTag(null);
+      setEditTagValue('');
+    } catch (error) {
+      console.error('Failed to update tag:', error);
+      alert(`Failed to update tag: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   // Translate document types to English
   const translateDocumentType = (documentType: string): string => {
     const translations: { [key: string]: string } = {
@@ -280,6 +332,24 @@ export default function VaultPage() {
         <div className="space-y-8">
           {/* Upload Section */}
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+            {/* Custom Tag Input */}
+            <div className="mb-6">
+              <label htmlFor="custom-tag" className="block text-sm font-medium text-gray-700 mb-2">
+                Optional: Add a custom tag for your documents
+              </label>
+              <input
+                type="text"
+                id="custom-tag"
+                value={customTag}
+                onChange={(e) => setCustomTag(e.target.value)}
+                placeholder="e.g., Important, Work, Personal, etc."
+                className="w-full max-w-md mx-auto px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={isUploading}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                This tag will be applied to all documents in this upload batch
+              </p>
+            </div>
             <input
               type="file"
               multiple
@@ -353,10 +423,42 @@ export default function VaultPage() {
                           {formatDate(doc.uploadedAt)}
                         </span>
                         {doc.documentType && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            <Tag className="w-3 h-3 mr-1" />
-                            {translateDocumentType(doc.documentType)}
-                          </span>
+                          <div className="flex items-center space-x-2">
+                            {editingTag === doc.id ? (
+                              <div className="flex items-center space-x-1">
+                                <input
+                                  type="text"
+                                  value={editTagValue}
+                                  onChange={(e) => setEditTagValue(e.target.value)}
+                                  className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') saveTag(doc.id);
+                                    if (e.key === 'Escape') cancelEditingTag();
+                                  }}
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={() => saveTag(doc.id)}
+                                  className="text-green-600 hover:text-green-800"
+                                  title="Save tag"
+                                >
+                                  ✓
+                                </button>
+                                <button
+                                  onClick={cancelEditingTag}
+                                  className="text-red-600 hover:text-red-800"
+                                  title="Cancel"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                <Tag className="w-3 h-3 mr-1" />
+                                {translateDocumentType(doc.documentType)}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -375,6 +477,13 @@ export default function VaultPage() {
                       title="View Document"
                     >
                       <Eye className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => startEditingTag(doc.id, doc.documentType)}
+                      className="p-2 rounded-md text-blue-400 hover:text-blue-600 hover:bg-blue-50"
+                      title="Edit Tag"
+                    >
+                      <Edit2 className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => deleteDocument(doc.id)}

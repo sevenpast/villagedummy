@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
     const documentType = formData.get('documentType') as string;
     const tags = formData.get('tags') as string;
     const confidence = formData.get('confidence') as string;
+    const customTag = formData.get('customTag') as string;
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -60,7 +61,14 @@ export async function POST(request: NextRequest) {
     let finalIsSwissDocument = true;
     let finalExtractedText = '';
     
-    if (!finalDocumentType) {
+    // Use custom tag if provided by user
+    if (customTag && customTag.trim()) {
+      finalDocumentType = customTag.trim();
+      finalTags = [customTag.trim().toLowerCase()];
+      finalConfidence = 1.0; // User-provided tags have highest confidence
+      finalDescription = `User-defined tag: ${customTag.trim()}`;
+      console.log(`🏷️ Using custom tag from user: "${customTag.trim()}"`);
+    } else if (!finalDocumentType) {
       try {
         // Call clean document analysis API
         const analysisFormData = new FormData();
