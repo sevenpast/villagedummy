@@ -1,0 +1,23 @@
+-- Fix database permissions for Service Role
+-- Run this in your Supabase SQL Editor
+
+-- Grant permissions to service_role for the public schema
+GRANT USAGE ON SCHEMA public TO service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO service_role;
+
+-- Specifically grant permissions on the documents table
+GRANT ALL ON public.documents TO service_role;
+GRANT USAGE ON SEQUENCE documents_id_seq TO service_role;
+
+-- Grant permissions on other important tables
+GRANT ALL ON public.users TO service_role;
+GRANT ALL ON public.tasks TO service_role;
+GRANT ALL ON public.children TO service_role;
+GRANT ALL ON public.user_task_status TO service_role;
+
+-- Make sure the service_role can create tables and sequences
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO service_role;

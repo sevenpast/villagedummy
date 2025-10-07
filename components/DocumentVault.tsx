@@ -115,13 +115,29 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId }) => {
     setIsDownloadingZip(true);
     
     try {
-      const response = await fetch('/api/documents/download-zip', {
+      // Try the main ZIP download first, fallback to temp ZIP if database issues
+      let response = await fetch('/api/documents/download-zip', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ userId: userId || 'default' }),
       });
+
+      // If database permission error, try temporary ZIP
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (errorData.code === '42501' || errorData.error?.includes('Database permission denied')) {
+          console.log('🔄 Database permission issue, trying temporary ZIP...');
+          response = await fetch('/api/documents/temp-zip', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId: userId || 'default' }),
+          });
+        }
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
