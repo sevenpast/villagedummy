@@ -22,11 +22,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // Generate unique filename
+    // Generate unique filename with safe characters
     const timestamp = Date.now();
     const fileExtension = file.name.split('.').pop();
-    const uniqueFileName = `${timestamp}_${file.name}`;
-    const storagePath = `${userId}/${uniqueFileName}`;
+    
+    // Clean filename: remove special characters and spaces
+    const cleanFileName = file.name
+      .replace(/[^a-zA-Z0-9.-]/g, '_')  // Replace special chars with underscore
+      .replace(/_+/g, '_')              // Replace multiple underscores with single
+      .replace(/^_|_$/g, '');           // Remove leading/trailing underscores
+    
+    const uniqueFileName = `${timestamp}_${cleanFileName}`;
+    
+    // Clean userId for storage path
+    const cleanUserId = userId.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const storagePath = `${cleanUserId}/${uniqueFileName}`;
 
     // Upload file to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
