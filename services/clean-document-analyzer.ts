@@ -359,67 +359,60 @@ export class CleanDocumentAnalyzer {
     const base64 = Buffer.from(arrayBuffer).toString('base64');
 
     const fileName = file.name;
-    const prompt = `
-**Role:** You are an intelligent document analysis service specialized in Swiss expat documents.
-
-**Task:** Analyze this document image and provide a structured response.
-
-**Available Information:**
-- Filename: ` + fileName + `
-- Basic PDF info: ` + (extractedText || 'No text extracted') + `
-- Document image: [Provided as base64]
-
-**Instructions:**
-1. **Visual Analysis:** Carefully examine the document image to identify:
-   - Headers, titles, and official stamps
-   - Form fields and labels (Name, Vorname, Geburtsdatum, etc.)
-   - Official logos or watermarks
-   - Document structure and layout
-2. **Text Recognition (OCR):** Extract ALL visible text from the image, including:
-   - Headers and titles
-   - Form field labels
-   - Official text and stamps
-   - Any handwritten or printed content
-3. **Document Identification:** Based on the visual analysis and extracted text, determine the document type.
-
-**Document Types (choose ONE):**
-- Reisepass/ID (Passport/ID documents)
-- Diplome & Zertifikate (Diplomas & Certificates)
-- Arbeitsvertrag (Employment Contract)
-- Mietvertrag (Rental Agreement)
-- Lohnabrechnung (Payslip)
-- Rechnungen (Invoices)
-- Versicherungsunterlagen (Insurance Documents)
-- Geburtsurkunde (Birth Certificate)
-- Heiratsurkunde (Marriage Certificate)
-- Aufenthaltsbewilligung (Residence Permit)
-- Bankdokumente (Banking Documents)
-- Steuerdokumente (Tax Documents)
-- Medizinische Dokumente (Medical Documents)
-- Unbekanntes Dokument (Unknown Document)
-
-**Key Recognition Patterns:**
-- If you see "Anmeldung", "Schule", "Kindergarten", "Name", "Vorname", "Geburtsdatum" → likely registration form
-- If you see "Passport", "Reisepass", "ID", "Ausweis" → likely passport/ID document
-- If you see "Diplom", "Zeugnis", "Zertifikat", "Certificate" → likely diploma/certificate
-- If you see "Arbeitsvertrag", "Contract", "Employment" → likely employment contract
-
-**CRITICAL: Response Format Requirements:**
-- Return ONLY valid JSON, no markdown, no code blocks, no explanations
-- Start directly with { and end with }
-- No ```json or ``` wrappers
-- No additional text before or after the JSON
-
-**Required JSON Format:**
-{
-  "documentType": "exact type from list above",
-  "confidence": 0.0-1.0,
-  "tags": ["tag1", "tag2", "tag3"],
-  "description": "brief description (max 20 words)",
-  "language": "DE|FR|IT|EN",
-  "isSwissDocument": true|false,
-  "extractedText": "all visible text from document"
-}
+    const pdfInfo = extractedText || 'No text extracted';
+    const prompt = '**Role:** You are an intelligent document analysis service specialized in Swiss expat documents.\n\n' +
+      '**Task:** Analyze this document image and provide a structured response.\n\n' +
+      '**Available Information:**\n' +
+      '- Filename: ' + fileName + '\n' +
+      '- Basic PDF info: ' + pdfInfo + '\n' +
+      '- Document image: [Provided as base64]\n\n' +
+      '**Instructions:**\n' +
+      '1. **Visual Analysis:** Carefully examine the document image to identify:\n' +
+      '   - Headers, titles, and official stamps\n' +
+      '   - Form fields and labels (Name, Vorname, Geburtsdatum, etc.)\n' +
+      '   - Official logos or watermarks\n' +
+      '   - Document structure and layout\n' +
+      '2. **Text Recognition (OCR):** Extract ALL visible text from the image, including:\n' +
+      '   - Headers and titles\n' +
+      '   - Form field labels\n' +
+      '   - Official text and stamps\n' +
+      '   - Any handwritten or printed content\n' +
+      '3. **Document Identification:** Based on the visual analysis and extracted text, determine the document type.\n\n' +
+      '**Document Types (choose ONE):**\n' +
+      '- Reisepass/ID (Passport/ID documents)\n' +
+      '- Diplome & Zertifikate (Diplomas & Certificates)\n' +
+      '- Arbeitsvertrag (Employment Contract)\n' +
+      '- Mietvertrag (Rental Agreement)\n' +
+      '- Lohnabrechnung (Payslip)\n' +
+      '- Rechnungen (Invoices)\n' +
+      '- Versicherungsunterlagen (Insurance Documents)\n' +
+      '- Geburtsurkunde (Birth Certificate)\n' +
+      '- Heiratsurkunde (Marriage Certificate)\n' +
+      '- Aufenthaltsbewilligung (Residence Permit)\n' +
+      '- Bankdokumente (Banking Documents)\n' +
+      '- Steuerdokumente (Tax Documents)\n' +
+      '- Medizinische Dokumente (Medical Documents)\n' +
+      '- Unbekanntes Dokument (Unknown Document)\n\n' +
+      '**Key Recognition Patterns:**\n' +
+      '- If you see "Anmeldung", "Schule", "Kindergarten", "Name", "Vorname", "Geburtsdatum" → likely registration form\n' +
+      '- If you see "Passport", "Reisepass", "ID", "Ausweis" → likely passport/ID document\n' +
+      '- If you see "Diplom", "Zeugnis", "Zertifikat", "Certificate" → likely diploma/certificate\n' +
+      '- If you see "Arbeitsvertrag", "Contract", "Employment" → likely employment contract\n\n' +
+      '**CRITICAL: Response Format Requirements:**\n' +
+      '- Return ONLY valid JSON, no markdown, no code blocks, no explanations\n' +
+      '- Start directly with { and end with }\n' +
+      '- No ```json or ``` wrappers\n' +
+      '- No additional text before or after the JSON\n\n' +
+      '**Required JSON Format:**\n' +
+      '{\n' +
+      '  "documentType": "exact type from list above",\n' +
+      '  "confidence": 0.0-1.0,\n' +
+      '  "tags": ["tag1", "tag2", "tag3"],\n' +
+      '  "description": "brief description (max 20 words)",\n' +
+      '  "language": "DE|FR|IT|EN",\n' +
+      '  "isSwissDocument": true|false,\n' +
+      '  "extractedText": "all visible text from document"\n' +
+      '}';
 `;
 
     try {
