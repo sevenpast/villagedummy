@@ -433,10 +433,11 @@ export class CleanDocumentAnalyzer {
       let cleanText = text.trim();
       
       // Remove markdown code blocks if present
-      if (cleanText.startsWith('```json')) {
-        cleanText = cleanText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-      } else if (cleanText.startsWith('```')) {
-        cleanText = cleanText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      const codeBlockMarker = String.fromCharCode(96, 96, 96);
+      if (cleanText.startsWith(codeBlockMarker + 'json')) {
+        cleanText = cleanText.replace(new RegExp('^' + codeBlockMarker + 'json\\s*'), '').replace(new RegExp('\\s*' + codeBlockMarker + '$'), '');
+      } else if (cleanText.startsWith(codeBlockMarker)) {
+        cleanText = cleanText.replace(new RegExp('^' + codeBlockMarker + '\\s*'), '').replace(new RegExp('\\s*' + codeBlockMarker + '$'), '');
       }
       
       console.log('🧹 Cleaned Gemini response:', cleanText);
