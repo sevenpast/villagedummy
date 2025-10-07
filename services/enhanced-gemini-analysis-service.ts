@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { OCRResult, StructuredOCRResult, OCRWord } from './enhanced-ocr-service';
+// import { OCRResult, StructuredOCRResult, OCRWord } from './enhanced-ocr-service';
 
 export interface EnhancedAnalysisResult {
   documentType: string;
