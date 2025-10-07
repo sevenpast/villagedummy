@@ -26,11 +26,17 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Fetch all documents for the user (same fields as load API)
-    const { data: documents, error: fetchError } = await supabase
+    // Handle non-UUID user IDs (like 'default')
+    let query = supabase
       .from('documents')
-      .select('id, file_name, file_type, file_size, document_type, uploaded_at, storage_path')
-      .eq('user_id', userId);
+      .select('id, file_name, file_type, file_size, document_type, uploaded_at, storage_path');
+    
+    // Only filter by user_id if it's a valid UUID, otherwise get all documents
+    if (userId && userId !== 'default' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data: documents, error: fetchError } = await query;
 
     if (fetchError) {
       console.error('❌ Error fetching documents:', fetchError);

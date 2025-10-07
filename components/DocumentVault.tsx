@@ -126,9 +126,16 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId }) => {
 
       // If database permission error, try temporary ZIP
       if (!response.ok) {
-        const errorData = await response.json();
-        if (errorData.code === '42501' || errorData.error?.includes('Database permission denied')) {
-          console.log('🔄 Database permission issue, trying temporary ZIP...');
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          // If we can't parse the error, assume it's a database issue
+          errorData = { code: '42501', error: 'Database permission denied' };
+        }
+        
+        if (errorData.code === '42501' || errorData.code === '22P02' || errorData.error?.includes('Database permission denied') || errorData.error?.includes('invalid input syntax')) {
+          console.log('🔄 Database issue detected, trying temporary ZIP...');
           response = await fetch('/api/documents/temp-zip', {
             method: 'POST',
             headers: {

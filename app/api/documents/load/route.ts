@@ -28,12 +28,18 @@ export async function GET(request: NextRequest) {
 
     console.log(`📁 Loading documents for user: ${userId}`);
 
-    // Get documents from database (without file_data for performance)
-    const { data, error } = await supabase
+    // Handle non-UUID user IDs (like 'default')
+    let query = supabase
       .from('documents')
       .select('id, file_name, file_type, file_size, document_type, uploaded_at')
-      .eq('user_id', userId)
       .order('uploaded_at', { ascending: false });
+    
+    // Only filter by user_id if it's a valid UUID, otherwise get all documents
+    if (userId && userId !== 'default' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data, error } = await query;
 
     if (error) {
       console.error('❌ Database error:', error);
