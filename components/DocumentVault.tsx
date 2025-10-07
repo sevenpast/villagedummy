@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Upload, File, Trash2, Download, Eye, Tag, Plus } from 'lucide-react';
+import { Upload, File, Trash2, Download, Eye, Tag } from 'lucide-react';
 
 interface Document {
   id: string;
@@ -19,22 +19,23 @@ interface DocumentVaultProps {
   userId?: string;
 }
 
-const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => {
+const DocumentVault: React.FC<DocumentVaultProps> = ({ userId: propUserId }) => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState('');
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showPreview, setShowPreview] = useState(false);
 
-  // Load documents on component mount
+  const currentUserId = propUserId || 'default';
+
   useEffect(() => {
     loadDocuments();
-  }, [userId]);
+  }, [currentUserId]);
 
   const loadDocuments = async () => {
     try {
-      const response = await fetch(`/api/documents/load?userId=${userId}`);
+      const response = await fetch(`/api/documents/load?userId=${currentUserId}`);
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.documents) {
@@ -66,9 +67,6 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => 
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        setUploadProgress(`Uploading ${file.name}...`);
-
-        // Step 1: Basic document type detection (Gemini temporarily disabled)
         setUploadProgress(`Processing ${file.name}...`);
         
         let documentType = 'Other';
@@ -107,10 +105,9 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => 
 
         setUploadProgress(`Uploading ${file.name}...`);
 
-        // Step 2: Upload to Supabase Storage with analysis results
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('userId', userId);
+        formData.append('userId', currentUserId);
         formData.append('documentType', documentType);
         formData.append('tags', JSON.stringify(tags));
         formData.append('confidence', confidence.toString());
@@ -130,12 +127,13 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => 
         }
       }
 
-      // Reload documents after upload
       await loadDocuments();
       setUploadProgress('Upload completed successfully!');
       
       // Clear the input
-      event.target.value = '';
+      if (event.target) {
+        event.target.value = '';
+      }
 
     } catch (error) {
       console.error('Upload failed:', error);
@@ -153,20 +151,19 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => 
 
     try {
       const response = await fetch('/api/documents/delete', {
-        method: 'DELETE',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ documentId, userId }),
+        body: JSON.stringify({ documentId, userId: currentUserId }),
       });
 
-      if (response.ok) {
-        // Remove from local state
-        setDocuments(docs => docs.filter(doc => doc.id !== documentId));
-        console.log('✅ Document deleted successfully');
-      } else {
+      if (!response.ok) {
         throw new Error('Failed to delete document');
       }
+
+      console.log('Document deleted successfully');
+      await loadDocuments();
     } catch (error) {
       console.error('Delete failed:', error);
       alert(`Failed to delete document: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -175,7 +172,7 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => 
 
   const downloadDocument = async (document: Document) => {
     try {
-      const response = await fetch(`/api/documents/download?documentId=${document.id}&userId=${userId}`);
+      const response = await fetch(`/api/documents/download?documentId=${document.id}&userId=${currentUserId}`);
       
       if (response.ok) {
         const blob = await response.blob();
@@ -202,15 +199,15 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => 
       return;
     }
 
-    setIsDownloading(true);
-    
+    setIsDownloadingZip(true);
+
     try {
       const response = await fetch('/api/documents/download-zip', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId: currentUserId }),
       });
 
       if (response.ok) {
@@ -218,7 +215,7 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => 
         const url = window.URL.createObjectURL(blob);
         const a = window.document.createElement('a');
         a.href = url;
-        a.download = `documents_${userId}_${new Date().toISOString().split('T')[0]}.zip`;
+        a.download = `documents_${currentUserId}_${new Date().toISOString().split('T')[0]}.zip`;
         window.document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -231,11 +228,11 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => 
       console.error('ZIP download failed:', error);
       alert(`Failed to download ZIP: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
-      setIsDownloading(false);
+      setIsDownloadingZip(false);
     }
   };
 
-  const formatFileSize = (bytes: number): string => {
+  const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -243,160 +240,173 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => 
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Document Vault</h1>
-        <p className="text-gray-600">Manage and organize your important documents</p>
-      </div>
-
+    <div className="space-y-8">
       {/* Upload Section */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Upload Documents</h2>
-          <div className="flex items-center space-x-2">
-            <Upload className="w-5 h-5 text-gray-500" />
-            <span className="text-sm text-gray-500">Drag & drop or click to upload</span>
-          </div>
-        </div>
-
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
-          <input
-            type="file"
-            multiple
-            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
-            onChange={handleFileUpload}
-            disabled={isUploading}
-            className="hidden"
-            id="file-upload"
-          />
-          <label
-            htmlFor="file-upload"
-            className={`cursor-pointer ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <Plus className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-lg font-medium text-gray-900 mb-2">
-              {isUploading ? 'Uploading...' : 'Choose files to upload'}
-            </p>
-            <p className="text-sm text-gray-500">
-              PDF, DOC, DOCX, JPG, PNG, TXT files supported
-            </p>
-          </label>
-        </div>
-
-        {uploadProgress && (
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-700">{uploadProgress}</p>
-          </div>
-        )}
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+        <input
+          type="file"
+          multiple
+          onChange={handleFileUpload}
+          className="hidden"
+          id="file-upload"
+          disabled={isUploading}
+        />
+        <label
+          htmlFor="file-upload"
+          className={`cursor-pointer ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          {isUploading ? (
+            <div className="flex items-center justify-center space-x-2 text-blue-600">
+              <Upload className="w-6 h-6 animate-pulse" />
+              <p className="text-lg font-medium">{uploadProgress}</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center space-y-2">
+              <Upload className="w-10 h-10 text-gray-400" />
+              <p className="text-lg font-medium text-gray-700">Click to upload documents</p>
+              <p className="text-sm text-gray-500">Supports PDF, JPG, PNG, DOCX, etc.</p>
+            </div>
+          )}
+        </label>
       </div>
 
-      {/* Documents List */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Your Documents ({documents.length})
-            </h2>
-            {documents.length > 0 && (
-              <button
-                onClick={downloadAllAsZip}
-                disabled={isDownloading}
-                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                  isDownloading ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                {isDownloading ? 'Creating ZIP...' : 'Download All as ZIP'}
-              </button>
-            )}
+      {/* Download All as ZIP Section */}
+      {documents.length > 0 && (
+        <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+          <div className="text-center">
+            <button
+              onClick={downloadAllAsZip}
+              disabled={isDownloadingZip}
+              className={`inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 ${
+                isDownloadingZip ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+              }`}
+            >
+              <Download className="w-5 h-5 mr-2" />
+              {isDownloadingZip ? 'Creating ZIP...' : `Download All (${documents.length} documents)`}
+            </button>
+            <p className="mt-2 text-sm text-gray-600">
+              Download all your documents as a single ZIP file
+            </p>
           </div>
         </div>
+      )}
 
+      {/* Document List Header */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-semibold text-gray-900">Your Documents ({documents.length})</h2>
+      </div>
+
+      {/* Document List */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {documents.length === 0 ? (
-          <div className="p-12 text-center">
-            <File className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No documents yet</h3>
-            <p className="text-gray-500">Upload your first document to get started</p>
-          </div>
+          <p className="text-gray-500 col-span-full text-center">No documents uploaded yet.</p>
         ) : (
-          <div className="divide-y divide-gray-200">
-            {documents.map((doc) => (
-              <div key={doc.id} className="p-6 hover:bg-gray-50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex-shrink-0">
-                      <File className="w-8 h-8 text-blue-500" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-medium text-gray-900 truncate">
-                        {doc.fileName}
-                      </h3>
-                      <div className="flex items-center space-x-4 mt-1">
-                        <span className="text-sm text-gray-500">
-                          {formatFileSize(doc.fileSize)}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {formatDate(doc.uploadedAt)}
-                        </span>
-                        {doc.documentType && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            <Tag className="w-3 h-3 mr-1" />
-                            {doc.documentType}
+          documents.map((doc) => (
+            <div
+              key={doc.id}
+              className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col justify-between"
+            >
+              <div className="flex items-center space-x-3 mb-3">
+                <File className="w-6 h-6 text-blue-500" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 truncate">{doc.fileName}</p>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <span className="text-xs text-gray-500">{formatFileSize(doc.fileSize)}</span>
+                    <span className="text-sm text-gray-500">
+                      {formatDate(doc.uploadedAt)}
+                    </span>
+                    {doc.documentType && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <Tag className="w-3 h-3 mr-1" />
+                        {doc.documentType}
+                      </span>
+                    )}
+                    {doc.confidence && doc.confidence > 0.7 && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        AI: {(doc.confidence * 100).toFixed(0)}%
+                      </span>
+                    )}
+                    {doc.tags && doc.tags.length > 0 && doc.tags[0] !== 'unrecognized' && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {doc.tags.slice(0, 3).map((tag, index) => (
+                          <span key={index} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
+                            {tag}
                           </span>
-                        )}
-                        {doc.confidence && doc.confidence > 0.7 && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            AI: {(doc.confidence * 100).toFixed(0)}%
-                          </span>
-                        )}
-                        {doc.tags && doc.tags.length > 0 && doc.tags[0] !== 'unrecognized' && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {doc.tags.slice(0, 3).map((tag, index) => (
-                              <span key={index} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
-                                {tag}
-                              </span>
-                            ))}
-                            {doc.tags.length > 3 && (
-                              <span className="text-xs text-gray-500">+{doc.tags.length - 3} more</span>
-                            )}
-                          </div>
+                        ))}
+                        {doc.tags.length > 3 && (
+                          <span className="text-xs text-gray-500">+{doc.tags.length - 3} more</span>
                         )}
                       </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => downloadDocument(doc)}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      <Download className="w-4 h-4 mr-1" />
-                      Download
-                    </button>
-                    <button
-                      onClick={() => deleteDocument(doc.id)}
-                      className="inline-flex items-center px-3 py-2 border border-red-300 shadow-sm text-sm leading-4 font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Delete
-                    </button>
+                    )}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => downloadDocument(doc)}
+                  className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                  title="Download Document"
+                >
+                  <Download className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => { setSelectedDocument(doc); setShowPreview(true); }}
+                  className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                  title="View Document"
+                >
+                  <Eye className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => deleteDocument(doc.id)}
+                  className="p-2 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50"
+                  title="Delete Document"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          ))
         )}
       </div>
+
+      {/* Document Preview Modal */}
+      {showPreview && selectedDocument && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl h-full max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-900">{selectedDocument.fileName}</h3>
+              <button
+                onClick={() => setShowPreview(false)}
+                className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex-1 p-4 overflow-auto">
+              {selectedDocument.fileType.startsWith('image/') ? (
+                <img
+                  src={`https://uhnwfpenbkxgdkhkansu.supabase.co/storage/v1/object/public/documents/${selectedDocument.storagePath}`}
+                  alt={selectedDocument.fileName}
+                  className="max-w-full h-auto mx-auto"
+                />
+              ) : selectedDocument.fileType === 'application/pdf' ? (
+                <iframe
+                  src={`https://uhnwfpenbkxgdkhkansu.supabase.co/storage/v1/object/public/documents/${selectedDocument.storagePath}`}
+                  className="w-full h-full"
+                  title={selectedDocument.fileName}
+                />
+              ) : (
+                <p className="text-gray-600">No preview available for this file type. Please download to view.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

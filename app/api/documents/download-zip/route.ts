@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     // Get all documents for the user
     let query = supabase
       .from('documents')
-      .select('id, file_name, file_type, file_size, document_type, uploaded_at, storage_path, tags, confidence')
+      .select('id, file_name, file_type, file_size, document_type, uploaded_at, storage_path')
       .order('uploaded_at', { ascending: false });
     
     // Only filter by user_id if it's a valid UUID, otherwise get documents with null user_id
