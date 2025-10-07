@@ -51,82 +51,80 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to upload file to storage' }, { status: 500 });
     }
 
-    // Use provided document type or run intelligent analysis
+    // Use provided document type or run intelligent filename-based detection
     let finalDocumentType = documentType;
     let finalTags = ['unrecognized'];
     let finalConfidence = 0.5;
     
     if (!finalDocumentType) {
-      try {
-        // Call intelligent analysis API
-        const analysisFormData = new FormData();
-        analysisFormData.append('file', file);
-        analysisFormData.append('userId', userId);
-
-        const analysisResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/documents/analyze-intelligent`, {
-          method: 'POST',
-          body: analysisFormData,
-        });
-
-        if (analysisResponse.ok) {
-          const analysisData = await analysisResponse.json();
-          if (analysisData.success && analysisData.analysis) {
-            const analysis = analysisData.analysis;
-            finalDocumentType = analysis.documentType;
-            finalTags = analysis.tags || [];
-            finalConfidence = analysis.confidence || 0.5;
-            
-            console.log(`✅ AI Analysis completed: ${finalDocumentType} (confidence: ${finalConfidence})`);
-            console.log(`🏷️ Tags: ${finalTags.join(', ')}`);
-          }
-        } else {
-          throw new Error('AI analysis failed');
-        }
-      } catch (error) {
-        console.log('⚠️ AI analysis error, using fallback detection:', error);
-        
-        // Fallback to filename-based detection
-        const fileName = file.name.toLowerCase();
-        if (fileName.includes('passport') || fileName.includes('pass') || fileName.includes('reisepass')) {
-          finalDocumentType = 'Reisepass/ID';
-          finalTags = ['passport', 'identity'];
-          finalConfidence = 0.8;
-        } else if (fileName.includes('id') || fileName.includes('identity')) {
-          finalDocumentType = 'Reisepass/ID';
-          finalTags = ['id', 'identity'];
-          finalConfidence = 0.8;
-        } else if (fileName.includes('diploma') || fileName.includes('degree') || fileName.includes('zeugnis')) {
-          finalDocumentType = 'Diplome & Zertifikate';
-          finalTags = ['education', 'certificate'];
-          finalConfidence = 0.8;
-        } else if (fileName.includes('contract') || fileName.includes('employment')) {
-          finalDocumentType = 'Arbeitsvertrag';
-          finalTags = ['employment', 'contract'];
-          finalConfidence = 0.8;
-        } else if (fileName.includes('rental') || fileName.includes('miete')) {
-          finalDocumentType = 'Mietvertrag';
-          finalTags = ['rental', 'housing'];
-          finalConfidence = 0.8;
-        } else if (fileName.includes('insurance') || fileName.includes('versicherung')) {
-          finalDocumentType = 'Versicherungsunterlagen';
-          finalTags = ['insurance', 'health'];
-          finalConfidence = 0.8;
-        } else if (fileName.includes('birth') || fileName.includes('geburt')) {
-          finalDocumentType = 'Geburtsurkunde';
-          finalTags = ['birth', 'certificate'];
-          finalConfidence = 0.8;
-        } else if (fileName.includes('marriage') || fileName.includes('heirat')) {
-          finalDocumentType = 'Heiratsurkunde';
-          finalTags = ['marriage', 'certificate'];
-          finalConfidence = 0.8;
-        } else {
-          finalDocumentType = 'Unbekanntes Dokument';
-          finalTags = ['unrecognized'];
-          finalConfidence = 0.3;
-        }
-        
-        console.log(`✅ Fallback detection: ${finalDocumentType} (confidence: ${finalConfidence})`);
+      // Enhanced filename-based detection
+      const fileName = file.name.toLowerCase();
+      console.log(`🔍 Analyzing filename: ${fileName}`);
+      
+      if (fileName.includes('passport') || fileName.includes('pass') || fileName.includes('reisepass')) {
+        finalDocumentType = 'Reisepass/ID';
+        finalTags = ['passport', 'identity', 'travel'];
+        finalConfidence = 0.9;
+      } else if (fileName.includes('id') || fileName.includes('identity') || fileName.includes('ausweis')) {
+        finalDocumentType = 'Reisepass/ID';
+        finalTags = ['id', 'identity'];
+        finalConfidence = 0.9;
+      } else if (fileName.includes('diploma') || fileName.includes('degree') || fileName.includes('zeugnis') || fileName.includes('zertifikat')) {
+        finalDocumentType = 'Diplome & Zertifikate';
+        finalTags = ['education', 'certificate', 'diploma'];
+        finalConfidence = 0.9;
+      } else if (fileName.includes('contract') || fileName.includes('employment') || fileName.includes('arbeitsvertrag')) {
+        finalDocumentType = 'Arbeitsvertrag';
+        finalTags = ['employment', 'contract', 'work'];
+        finalConfidence = 0.9;
+      } else if (fileName.includes('rental') || fileName.includes('miete') || fileName.includes('wohnung')) {
+        finalDocumentType = 'Mietvertrag';
+        finalTags = ['rental', 'housing', 'contract'];
+        finalConfidence = 0.9;
+      } else if (fileName.includes('birth') || fileName.includes('geburt') || fileName.includes('geburtsurkunde')) {
+        finalDocumentType = 'Geburtsurkunde';
+        finalTags = ['birth', 'certificate', 'personal'];
+        finalConfidence = 0.9;
+      } else if (fileName.includes('marriage') || fileName.includes('heirat') || fileName.includes('heiratsurkunde')) {
+        finalDocumentType = 'Heiratsurkunde';
+        finalTags = ['marriage', 'certificate', 'personal'];
+        finalConfidence = 0.9;
+      } else if (fileName.includes('insurance') || fileName.includes('versicherung')) {
+        finalDocumentType = 'Versicherungsunterlagen';
+        finalTags = ['insurance', 'health', 'coverage'];
+        finalConfidence = 0.9;
+      } else if (fileName.includes('salary') || fileName.includes('lohn') || fileName.includes('gehalt')) {
+        finalDocumentType = 'Lohnabrechnung';
+        finalTags = ['payroll', 'salary', 'employment'];
+        finalConfidence = 0.9;
+      } else if (fileName.includes('invoice') || fileName.includes('rechnung') || fileName.includes('bill')) {
+        finalDocumentType = 'Rechnungen';
+        finalTags = ['invoice', 'billing', 'payment'];
+        finalConfidence = 0.9;
+      } else if (fileName.includes('bank') || fileName.includes('konto') || fileName.includes('account')) {
+        finalDocumentType = 'Bankdokumente';
+        finalTags = ['banking', 'financial', 'account'];
+        finalConfidence = 0.9;
+      } else if (fileName.includes('tax') || fileName.includes('steuer') || fileName.includes('fiscal')) {
+        finalDocumentType = 'Steuerdokumente';
+        finalTags = ['tax', 'fiscal', 'government'];
+        finalConfidence = 0.9;
+      } else if (fileName.includes('medical') || fileName.includes('medizin') || fileName.includes('health')) {
+        finalDocumentType = 'Medizinische Dokumente';
+        finalTags = ['medical', 'health', 'doctor'];
+        finalConfidence = 0.9;
+      } else if (fileName.includes('permit') || fileName.includes('bewilligung') || fileName.includes('visa')) {
+        finalDocumentType = 'Aufenthaltsbewilligung';
+        finalTags = ['residence', 'permit', 'immigration'];
+        finalConfidence = 0.9;
+      } else {
+        finalDocumentType = 'Unbekanntes Dokument';
+        finalTags = ['unrecognized'];
+        finalConfidence = 0.3;
       }
+      
+      console.log(`✅ Intelligent filename detection: ${finalDocumentType} (confidence: ${finalConfidence})`);
+      console.log(`🏷️ Tags: ${finalTags.join(', ')}`);
     }
 
     // Use tags and confidence from intelligent analysis or provided values
