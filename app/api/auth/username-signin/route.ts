@@ -34,9 +34,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // FORCE DEMO MODE for now - always use demo authentication
+    // SIMPLE DEMO AUTHENTICATION - Check username/password combination
     console.log('🔧 Demo mode: Authenticating user:', username)
-    // Demo mode - simulate authentication
+    
+    // Simple demo credentials check
+    const validCredentials = [
+      { username: 'admin', password: 'admin123' },
+      { username: 'test', password: 'test123' },
+      { username: 'user', password: 'user123' },
+      { username: 'demo', password: 'demo123' }
+    ]
+    
+    const isValidCredential = validCredentials.some(
+      cred => cred.username === username && cred.password === password
+    )
+    
+    if (!isValidCredential) {
+      console.log('❌ Demo mode: Invalid credentials for:', username)
+      return NextResponse.json(
+        { error: 'Invalid username or password' },
+        { status: 401 }
+      )
+    }
+    
+    // Demo mode - simulate authentication for valid credentials
     const demoUser = {
       id: `user_${Date.now()}`,
       auth_user_id: `auth_${Date.now()}`,
