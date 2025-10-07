@@ -14,6 +14,9 @@ interface Document {
   storagePath: string;
   tags?: string[];
   confidence?: number;
+  description?: string;
+  language?: string;
+  isSwissDocument?: boolean;
 }
 
 export default function VaultPage() {
@@ -62,8 +65,11 @@ export default function VaultPage() {
             documentType: doc.document_type,
             uploadedAt: doc.uploaded_at,
             storagePath: doc.storage_path,
-            tags: ['unrecognized'],
-            confidence: 0.5,
+            tags: doc.tags || ['unrecognized'],
+            confidence: doc.confidence || 0.5,
+            description: doc.description || '',
+            language: doc.language || 'DE',
+            isSwissDocument: doc.is_swiss_document || true,
           })));
         }
       }
@@ -82,50 +88,13 @@ export default function VaultPage() {
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        setUploadProgress(`Processing ${file.name}...`);
+        setUploadProgress(`Analyzing document with AI...`);
         
-        let documentType = 'Other';
-        let tags = ['unrecognized'];
-        let confidence = 0.5;
-
-        // Basic filename-based detection
-        const fileName = file.name.toLowerCase();
-        if (fileName.includes('passport') || fileName.includes('pass') || fileName.includes('reisepass')) {
-          documentType = 'Passport';
-          tags = ['passport', 'identity'];
-          confidence = 0.8;
-        } else if (fileName.includes('id') || fileName.includes('identity')) {
-          documentType = 'ID Card';
-          tags = ['id', 'identity'];
-          confidence = 0.8;
-        } else if (fileName.includes('diploma') || fileName.includes('degree') || fileName.includes('zeugnis')) {
-          documentType = 'Education Certificate';
-          tags = ['education', 'certificate'];
-          confidence = 0.8;
-        } else if (fileName.includes('contract') || fileName.includes('employment')) {
-          documentType = 'Employment Contract';
-          tags = ['employment', 'contract'];
-          confidence = 0.8;
-        } else if (fileName.includes('birth') || fileName.includes('geburt')) {
-          documentType = 'Birth Certificate';
-          tags = ['birth', 'certificate'];
-          confidence = 0.8;
-        } else if (fileName.includes('marriage') || fileName.includes('heirat')) {
-          documentType = 'Marriage Certificate';
-          tags = ['marriage', 'certificate'];
-          confidence = 0.8;
-        }
-
-        console.log(`✅ Document type detected: ${documentType} (confidence: ${confidence})`);
-
-        setUploadProgress(`Uploading ${file.name}...`);
-
+        // Let the server handle intelligent document analysis
         const formData = new FormData();
         formData.append('file', file);
         formData.append('userId', userId);
-        formData.append('documentType', documentType);
-        formData.append('tags', JSON.stringify(tags));
-        formData.append('confidence', confidence.toString());
+        // Don't provide documentType, tags, or confidence - let the server analyze intelligently
 
         const response = await fetch('/api/documents/upload', {
           method: 'POST',
@@ -369,8 +338,23 @@ export default function VaultPage() {
                         )}
                         {doc.confidence && doc.confidence > 0.7 && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            AI: {(doc.confidence * 100).toFixed(0)}%
+                            🤖 AI: {(doc.confidence * 100).toFixed(0)}%
                           </span>
+                        )}
+                        {doc.confidence && doc.confidence <= 0.7 && doc.confidence > 0.3 && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            ⚠️ AI: {(doc.confidence * 100).toFixed(0)}%
+                          </span>
+                        )}
+                        {doc.language && doc.language !== 'DE' && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            🌍 {doc.language}
+                          </span>
+                        )}
+                        {doc.description && (
+                          <p className="text-xs text-gray-600 mt-1 italic">
+                            {doc.description}
+                          </p>
                         )}
                         {doc.tags && doc.tags.length > 0 && doc.tags[0] !== 'unrecognized' && (
                           <div className="flex flex-wrap gap-1 mt-2">

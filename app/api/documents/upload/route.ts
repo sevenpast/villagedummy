@@ -51,35 +51,87 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to upload file to storage' }, { status: 500 });
     }
 
-    // Use provided document type or fallback to filename analysis
+    // Use provided document type or run intelligent analysis
     let finalDocumentType = documentType;
+    let finalTags = ['unrecognized'];
+    let finalConfidence = 0.5;
+    
     if (!finalDocumentType) {
-      const fileName = file.name.toLowerCase();
-      
-      if (fileName.includes('passport') || fileName.includes('pass')) {
-        finalDocumentType = 'Passport';
-      } else if (fileName.includes('id') || fileName.includes('identity')) {
-        finalDocumentType = 'ID Card';
-      } else if (fileName.includes('contract') || fileName.includes('employment')) {
-        finalDocumentType = 'Employment Contract';
-      } else if (fileName.includes('rental') || fileName.includes('lease')) {
-        finalDocumentType = 'Rental Agreement';
-      } else if (fileName.includes('insurance')) {
-        finalDocumentType = 'Insurance';
-      } else if (fileName.includes('birth') || fileName.includes('certificate')) {
-        finalDocumentType = 'Birth Certificate';
-      } else if (fileName.includes('marriage')) {
-        finalDocumentType = 'Marriage Certificate';
-      } else if (fileName.includes('diploma') || fileName.includes('degree')) {
-        finalDocumentType = 'Education Certificate';
-      } else {
-        finalDocumentType = 'Other';
+      try {
+        // Call intelligent analysis API
+        const analysisFormData = new FormData();
+        analysisFormData.append('file', file);
+        analysisFormData.append('userId', userId);
+
+        const analysisResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/documents/analyze-intelligent`, {
+          method: 'POST',
+          body: analysisFormData,
+        });
+
+        if (analysisResponse.ok) {
+          const analysisData = await analysisResponse.json();
+          if (analysisData.success && analysisData.analysis) {
+            const analysis = analysisData.analysis;
+            finalDocumentType = analysis.documentType;
+            finalTags = analysis.tags || [];
+            finalConfidence = analysis.confidence || 0.5;
+            
+            console.log(`✅ AI Analysis completed: ${finalDocumentType} (confidence: ${finalConfidence})`);
+            console.log(`🏷️ Tags: ${finalTags.join(', ')}`);
+          }
+        } else {
+          throw new Error('AI analysis failed');
+        }
+      } catch (error) {
+        console.log('⚠️ AI analysis error, using fallback detection:', error);
+        
+        // Fallback to filename-based detection
+        const fileName = file.name.toLowerCase();
+        if (fileName.includes('passport') || fileName.includes('pass') || fileName.includes('reisepass')) {
+          finalDocumentType = 'Reisepass/ID';
+          finalTags = ['passport', 'identity'];
+          finalConfidence = 0.8;
+        } else if (fileName.includes('id') || fileName.includes('identity')) {
+          finalDocumentType = 'Reisepass/ID';
+          finalTags = ['id', 'identity'];
+          finalConfidence = 0.8;
+        } else if (fileName.includes('diploma') || fileName.includes('degree') || fileName.includes('zeugnis')) {
+          finalDocumentType = 'Diplome & Zertifikate';
+          finalTags = ['education', 'certificate'];
+          finalConfidence = 0.8;
+        } else if (fileName.includes('contract') || fileName.includes('employment')) {
+          finalDocumentType = 'Arbeitsvertrag';
+          finalTags = ['employment', 'contract'];
+          finalConfidence = 0.8;
+        } else if (fileName.includes('rental') || fileName.includes('miete')) {
+          finalDocumentType = 'Mietvertrag';
+          finalTags = ['rental', 'housing'];
+          finalConfidence = 0.8;
+        } else if (fileName.includes('insurance') || fileName.includes('versicherung')) {
+          finalDocumentType = 'Versicherungsunterlagen';
+          finalTags = ['insurance', 'health'];
+          finalConfidence = 0.8;
+        } else if (fileName.includes('birth') || fileName.includes('geburt')) {
+          finalDocumentType = 'Geburtsurkunde';
+          finalTags = ['birth', 'certificate'];
+          finalConfidence = 0.8;
+        } else if (fileName.includes('marriage') || fileName.includes('heirat')) {
+          finalDocumentType = 'Heiratsurkunde';
+          finalTags = ['marriage', 'certificate'];
+          finalConfidence = 0.8;
+        } else {
+          finalDocumentType = 'Unbekanntes Dokument';
+          finalTags = ['unrecognized'];
+          finalConfidence = 0.3;
+        }
+        
+        console.log(`✅ Fallback detection: ${finalDocumentType} (confidence: ${finalConfidence})`);
       }
     }
 
-    // Parse tags and confidence from Gemini analysis
-    let parsedTags = ['unrecognized'];
-    let parsedConfidence = 0.5;
+    // Use tags and confidence from intelligent analysis or provided values
+    let parsedTags = finalTags;
+    let parsedConfidence = finalConfidence;
     
     try {
       if (tags) {
@@ -89,10 +141,10 @@ export async function POST(request: NextRequest) {
         parsedConfidence = parseFloat(confidence);
       }
     } catch (error) {
-      console.warn('Failed to parse tags or confidence, using defaults');
+      console.warn('Failed to parse provided tags or confidence, using AI analysis results');
     }
 
-    // Save document metadata to database
+    // Save document metadata to database with AI analysis results
     // Handle non-UUID user IDs by using null for user_id
     const insertData = {
       user_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId) ? userId : null,
@@ -101,6 +153,12 @@ export async function POST(request: NextRequest) {
       file_size: file.size,
       storage_path: storagePath,
       document_type: finalDocumentType,
+      tags: parsedTags,
+      confidence: parsedConfidence,
+      description: `AI-analyzed document: ${finalDocumentType}`,
+      language: 'DE',
+      is_swiss_document: true,
+      extracted_text: '',
       uploaded_at: new Date().toISOString()
     };
 
