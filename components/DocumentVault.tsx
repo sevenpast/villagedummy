@@ -115,8 +115,8 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId }) => {
     setIsDownloadingZip(true);
     
     try {
-      // Try the main ZIP download first, fallback to temp ZIP if database issues
-      let response = await fetch('/api/documents/download-zip', {
+      // Try the main ZIP download first
+      const response = await fetch('/api/documents/download-zip', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -124,59 +124,71 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId }) => {
         body: JSON.stringify({ userId: userId || 'default' }),
       });
 
-      // If database permission error, try temporary ZIP
-      if (!response.ok) {
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch (e) {
-          // If we can't parse the error, assume it's a database issue
-          errorData = { code: '42501', error: 'Database permission denied' };
-        }
+      // If successful, download the ZIP
+      if (response.ok) {
+        const zipBlob = await response.blob();
         
-        if (errorData.code === '42501' || errorData.code === '22P02' || errorData.error?.includes('Database permission denied') || errorData.error?.includes('invalid input syntax')) {
-          console.log('🔄 Database issue detected, trying temporary ZIP...');
-          response = await fetch('/api/documents/temp-zip', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ userId: userId || 'default' }),
-          });
+        // Create download link
+        const url = window.URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `documents_${userId || 'default'}_${new Date().toISOString().split('T')[0]}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        console.log('✅ ZIP download completed successfully');
+        return;
+      }
+
+      // If failed, try to parse error and fallback to temp ZIP
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = { code: '42501', error: 'Database permission denied' };
+      }
+      
+      // Check if it's a database issue that we can handle with temp ZIP
+      if (errorData.code === '42501' || errorData.code === '22P02' || errorData.error?.includes('Database permission denied') || errorData.error?.includes('invalid input syntax')) {
+        console.log('🔄 Database issue detected, trying temporary ZIP...');
+        
+        const tempResponse = await fetch('/api/documents/temp-zip', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: userId || 'default' }),
+        });
+
+        if (tempResponse.ok) {
+          const zipBlob = await tempResponse.blob();
+          
+          // Create download link
+          const url = window.URL.createObjectURL(zipBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `database_setup_instructions_${new Date().toISOString().split('T')[0]}.zip`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          
+          console.log('✅ Temporary ZIP download completed successfully');
+          return;
         }
       }
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        
-        // If it's a database configuration error, show helpful message
-        if (errorData.code === '42501' || errorData.error?.includes('Database permission denied')) {
-          alert(`Database Configuration Required:\n\n${errorData.details || errorData.error}\n\nPlease configure your Supabase environment variables to enable document storage.`);
-          return;
-        }
-        
-        if (errorData.error?.includes('Database not configured')) {
-          alert(`Database Not Configured:\n\n${errorData.message}\n\nPlease set up your Supabase environment variables.`);
-          return;
-        }
-        
+      // If we get here, show error message
+      if (errorData.code === '42501' || errorData.error?.includes('Database permission denied')) {
+        alert(`Database Configuration Required:\n\n${errorData.details || errorData.error}\n\nPlease configure your Supabase environment variables to enable document storage.`);
+      } else if (errorData.error?.includes('Database not configured')) {
+        alert(`Database Not Configured:\n\n${errorData.message}\n\nPlease set up your Supabase environment variables.`);
+      } else {
         throw new Error(errorData.error || 'Failed to download ZIP');
       }
-
-      // Get the ZIP file as blob
-      const zipBlob = await response.blob();
       
-      // Create download link
-      const url = window.URL.createObjectURL(zipBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `documents_${userId || 'default'}_${new Date().toISOString().split('T')[0]}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      console.log('✅ ZIP download completed successfully');
     } catch (error) {
       console.error('❌ ZIP download failed:', error);
       alert(`Failed to download ZIP: ${error instanceof Error ? error.message : 'Unknown error'}`);
