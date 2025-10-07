@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     // Handle non-UUID user IDs (like 'default')
     let query = supabase
       .from('documents')
-      .select('id, file_name, file_type, file_size, document_type, uploaded_at, storage_path')
+      .select('id, file_name, file_type, file_size, document_type, uploaded_at, storage_path, tags, confidence')
       .order('uploaded_at', { ascending: false });
     
     // Only filter by user_id if it's a valid UUID, otherwise get documents with null user_id

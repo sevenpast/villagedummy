@@ -11,6 +11,8 @@ interface Document {
   documentType: string;
   uploadedAt: string;
   storagePath: string;
+  tags?: string[];
+  confidence?: number;
 }
 
 interface DocumentVaultProps {
@@ -36,7 +38,17 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => 
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.documents) {
-          setDocuments(data.documents);
+          setDocuments(data.documents.map((doc: any) => ({
+            id: doc.id,
+            fileName: doc.file_name,
+            fileType: doc.file_type,
+            fileSize: doc.file_size,
+            documentType: doc.document_type,
+            uploadedAt: doc.uploaded_at,
+            storagePath: doc.storage_path,
+            tags: doc.tags || ['unrecognized'],
+            confidence: doc.confidence || 0.5,
+          })));
         }
       }
     } catch (error) {
@@ -56,9 +68,43 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => 
         const file = files[i];
         setUploadProgress(`Uploading ${file.name}...`);
 
+        // Step 1: Intelligent document analysis with Gemini
+        setUploadProgress(`Analyzing ${file.name}...`);
+        
+        const analysisFormData = new FormData();
+        analysisFormData.append('file', file);
+        analysisFormData.append('fileName', file.name);
+
+        const analysisResponse = await fetch('/api/documents/analyze-document', {
+          method: 'POST',
+          body: analysisFormData,
+        });
+
+        let documentType = 'Other';
+        let tags = ['unrecognized'];
+        let confidence = 0.5;
+
+        if (analysisResponse.ok) {
+          const analysisResult = await analysisResponse.json();
+          if (analysisResult.success && analysisResult.analysis) {
+            documentType = analysisResult.analysis.documentType;
+            tags = analysisResult.analysis.tags || ['unrecognized'];
+            confidence = analysisResult.analysis.confidence || 0.5;
+            console.log(`✅ Document analyzed: ${documentType} (confidence: ${confidence})`);
+          }
+        } else {
+          console.warn('⚠️ Document analysis failed, using fallback');
+        }
+
+        setUploadProgress(`Uploading ${file.name}...`);
+
+        // Step 2: Upload to Supabase Storage with analysis results
         const formData = new FormData();
         formData.append('file', file);
         formData.append('userId', userId);
+        formData.append('documentType', documentType);
+        formData.append('tags', JSON.stringify(tags));
+        formData.append('confidence', confidence.toString());
 
         const response = await fetch('/api/documents/upload', {
           method: 'POST',
@@ -299,6 +345,23 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => 
                             <Tag className="w-3 h-3 mr-1" />
                             {doc.documentType}
                           </span>
+                        )}
+                        {doc.confidence && doc.confidence > 0.7 && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            AI: {(doc.confidence * 100).toFixed(0)}%
+                          </span>
+                        )}
+                        {doc.tags && doc.tags.length > 0 && doc.tags[0] !== 'unrecognized' && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {doc.tags.slice(0, 3).map((tag, index) => (
+                              <span key={index} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
+                                {tag}
+                              </span>
+                            ))}
+                            {doc.tags.length > 3 && (
+                              <span className="text-xs text-gray-500">+{doc.tags.length - 3} more</span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>

@@ -13,6 +13,9 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const userId = formData.get('userId') as string;
+    const documentType = formData.get('documentType') as string;
+    const tags = formData.get('tags') as string;
+    const confidence = formData.get('confidence') as string;
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -48,26 +51,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to upload file to storage' }, { status: 500 });
     }
 
-    // Determine document type based on filename and content
-    let documentType = 'Other';
-    const fileName = file.name.toLowerCase();
+    // Use provided document type or fallback to filename analysis
+    let finalDocumentType = documentType;
+    if (!finalDocumentType) {
+      const fileName = file.name.toLowerCase();
+      
+      if (fileName.includes('passport') || fileName.includes('pass')) {
+        finalDocumentType = 'Passport';
+      } else if (fileName.includes('id') || fileName.includes('identity')) {
+        finalDocumentType = 'ID Card';
+      } else if (fileName.includes('contract') || fileName.includes('employment')) {
+        finalDocumentType = 'Employment Contract';
+      } else if (fileName.includes('rental') || fileName.includes('lease')) {
+        finalDocumentType = 'Rental Agreement';
+      } else if (fileName.includes('insurance')) {
+        finalDocumentType = 'Insurance';
+      } else if (fileName.includes('birth') || fileName.includes('certificate')) {
+        finalDocumentType = 'Birth Certificate';
+      } else if (fileName.includes('marriage')) {
+        finalDocumentType = 'Marriage Certificate';
+      } else if (fileName.includes('diploma') || fileName.includes('degree')) {
+        finalDocumentType = 'Education Certificate';
+      } else {
+        finalDocumentType = 'Other';
+      }
+    }
+
+    // Parse tags and confidence from Gemini analysis
+    let parsedTags = ['unrecognized'];
+    let parsedConfidence = 0.5;
     
-    if (fileName.includes('passport') || fileName.includes('pass')) {
-      documentType = 'Passport';
-    } else if (fileName.includes('id') || fileName.includes('identity')) {
-      documentType = 'ID Card';
-    } else if (fileName.includes('contract') || fileName.includes('employment')) {
-      documentType = 'Employment Contract';
-    } else if (fileName.includes('rental') || fileName.includes('lease')) {
-      documentType = 'Rental Agreement';
-    } else if (fileName.includes('insurance')) {
-      documentType = 'Insurance';
-    } else if (fileName.includes('birth') || fileName.includes('certificate')) {
-      documentType = 'Birth Certificate';
-    } else if (fileName.includes('marriage')) {
-      documentType = 'Marriage Certificate';
-    } else if (fileName.includes('diploma') || fileName.includes('degree')) {
-      documentType = 'Education Certificate';
+    try {
+      if (tags) {
+        parsedTags = JSON.parse(tags);
+      }
+      if (confidence) {
+        parsedConfidence = parseFloat(confidence);
+      }
+    } catch (error) {
+      console.warn('Failed to parse tags or confidence, using defaults');
     }
 
     // Save document metadata to database
@@ -78,7 +100,9 @@ export async function POST(request: NextRequest) {
       file_type: file.type || `application/${fileExtension}`,
       file_size: file.size,
       storage_path: storagePath,
-      document_type: documentType,
+      document_type: finalDocumentType,
+      tags: parsedTags,
+      confidence: parsedConfidence,
       uploaded_at: new Date().toISOString()
     };
 
