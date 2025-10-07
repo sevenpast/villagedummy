@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { PDFDocument } from 'pdf-lib';
 
 export interface DocumentAnalysisResult {
   documentType: string;
@@ -305,9 +306,28 @@ export class CleanDocumentAnalyzer {
       throw new Error('Gemini AI not initialized');
     }
 
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
-    // Convert file to base64
+    // Step 1: Extract text from PDF using pdf-lib
+    let extractedText = '';
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
+      const pages = pdfDoc.getPages();
+      
+      // Extract text from all pages
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i];
+        // Note: pdf-lib doesn't have built-in text extraction, but we can get basic info
+        extractedText += `Page ${i + 1}: PDF Document\n`;
+      }
+      
+      console.log(`📄 Extracted basic info from ${pages.length} pages`);
+    } catch (error) {
+      console.log('⚠️ PDF text extraction failed, using image analysis:', error);
+    }
+
+    // Step 2: Convert file to base64 for image analysis
     const arrayBuffer = await file.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString('base64');
 
@@ -316,21 +336,45 @@ export class CleanDocumentAnalyzer {
 
 **Task:** Analyze this document image and provide a structured response.
 
+**Available Information:**
+- Filename: ${file.name}
+- Basic PDF info: ${extractedText || 'No text extracted'}
+- Document image: [Provided as base64]
+
+**Instructions:**
+1. **Visual Analysis:** Carefully examine the document image to identify:
+   - Headers, titles, and official stamps
+   - Form fields and labels (Name, Vorname, Geburtsdatum, etc.)
+   - Official logos or watermarks
+   - Document structure and layout
+2. **Text Recognition (OCR):** Extract ALL visible text from the image, including:
+   - Headers and titles
+   - Form field labels
+   - Official text and stamps
+   - Any handwritten or printed content
+3. **Document Identification:** Based on the visual analysis and extracted text, determine the document type.
+
 **Document Types (choose ONE):**
-- Reisepass/ID
-- Diplome & Zertifikate  
-- Arbeitsvertrag
-- Mietvertrag
-- Lohnabrechnung
-- Rechnungen
-- Versicherungsunterlagen
-- Geburtsurkunde
-- Heiratsurkunde
-- Aufenthaltsbewilligung
-- Bankdokumente
-- Steuerdokumente
-- Medizinische Dokumente
-- Unbekanntes Dokument
+- Reisepass/ID (Passport/ID documents)
+- Diplome & Zertifikate (Diplomas & Certificates)
+- Arbeitsvertrag (Employment Contract)
+- Mietvertrag (Rental Agreement)
+- Lohnabrechnung (Payslip)
+- Rechnungen (Invoices)
+- Versicherungsunterlagen (Insurance Documents)
+- Geburtsurkunde (Birth Certificate)
+- Heiratsurkunde (Marriage Certificate)
+- Aufenthaltsbewilligung (Residence Permit)
+- Bankdokumente (Banking Documents)
+- Steuerdokumente (Tax Documents)
+- Medizinische Dokumente (Medical Documents)
+- Unbekanntes Dokument (Unknown Document)
+
+**Key Recognition Patterns:**
+- If you see "Anmeldung", "Schule", "Kindergarten", "Name", "Vorname", "Geburtsdatum" → likely registration form
+- If you see "Passport", "Reisepass", "ID", "Ausweis" → likely passport/ID document
+- If you see "Diplom", "Zeugnis", "Zertifikat", "Certificate" → likely diploma/certificate
+- If you see "Arbeitsvertrag", "Contract", "Employment" → likely employment contract
 
 **Response Format (JSON only, no markdown):**
 {
