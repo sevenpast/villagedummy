@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
-import * as pdf from 'pdf-parse';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,12 +32,32 @@ export async function POST(request: NextRequest) {
     let extractedText = '';
     
     if (file.type === 'application/pdf') {
-      // Extract text from PDF
+      // For PDFs, use Gemini Vision API to extract text
       const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const pdfData = await pdf(buffer);
-      extractedText = pdfData.text;
-      console.log(`📝 Extracted ${extractedText.length} characters from PDF`);
+      const base64 = Buffer.from(arrayBuffer).toString('base64');
+      
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+      
+      const pdfPrompt = `
+**Rolle:** Du bist ein intelligenter OCR-Service für PDF-Dokumente. Extrahiere den gesamten Text aus diesem PDF-Dokument.
+
+**Aufgabe:** Lies den gesamten Text aus dem PDF und gib ihn als reinen Text zurück. Behalte die Struktur bei, aber entferne alle Formatierungen.
+
+**Wichtig:** Gib nur den extrahierten Text zurück, keine Erklärungen oder Kommentare.
+      `;
+
+      const pdfResult = await model.generateContent([
+        pdfPrompt,
+        {
+          inlineData: {
+            data: base64,
+            mimeType: file.type
+          }
+        }
+      ]);
+
+      extractedText = pdfResult.response.text();
+      console.log(`📝 Extracted ${extractedText.length} characters from PDF via Gemini Vision`);
     } else if (file.type.startsWith('image/')) {
       // For images, we'll use Gemini Vision API
       const arrayBuffer = await file.arrayBuffer();
