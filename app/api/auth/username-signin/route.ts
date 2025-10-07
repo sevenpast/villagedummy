@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
 // Check if Supabase is properly configured
+console.log('🔧 Supabase configuration check:', {
+  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  supabaseClient: supabase ? 'configured' : 'null'
+})
+
 if (!supabase) {
   console.warn('⚠️ Supabase not configured - using demo mode for authentication')
 }
@@ -28,37 +34,37 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if Supabase is configured
-    if (!supabase) {
-      // Demo mode - simulate authentication
-      const demoUser = {
-        id: `user_${Date.now()}`,
-        auth_user_id: `auth_${Date.now()}`,
-        username: username,
-        email: username.includes('@') ? username : `${username}@demo.local`,
-        first_name: username.charAt(0).toUpperCase() + username.slice(1),
-        last_name: 'User',
-        country_of_origin: 'DE',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        last_login_at: new Date().toISOString(),
-      }
-
-      return NextResponse.json({
-        success: true,
-        user: demoUser,
-        session: {
-          access_token: `demo_token_${Date.now()}`,
-          refresh_token: `demo_refresh_${Date.now()}`,
-          expires_at: Date.now() + 3600000,
-          user: {
-            id: demoUser.auth_user_id,
-            email: demoUser.email
-          }
-        },
-        message: 'Login successful (DEMO MODE)'
-      })
+    // FORCE DEMO MODE for now - always use demo authentication
+    console.log('🔧 Demo mode: Authenticating user:', username)
+    // Demo mode - simulate authentication
+    const demoUser = {
+      id: `user_${Date.now()}`,
+      auth_user_id: `auth_${Date.now()}`,
+      username: username,
+      email: username.includes('@') ? username : `${username}@demo.local`,
+      first_name: username.charAt(0).toUpperCase() + username.slice(1),
+      last_name: 'User',
+      country_of_origin: 'DE',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      last_login_at: new Date().toISOString(),
     }
+
+    console.log('✅ Demo mode: Authentication successful for:', username)
+    return NextResponse.json({
+      success: true,
+      user: demoUser,
+      session: {
+        access_token: `demo_token_${Date.now()}`,
+        refresh_token: `demo_refresh_${Date.now()}`,
+        expires_at: Date.now() + 3600000,
+        user: {
+          id: demoUser.auth_user_id,
+          email: demoUser.email
+        }
+      },
+      message: 'Login successful (DEMO MODE)'
+    })
 
     // Check if username is an email or regular username
     const isEmail = username.includes('@')
