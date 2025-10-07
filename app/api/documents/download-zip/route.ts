@@ -17,6 +17,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
+    // Check if Supabase is properly configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.warn('⚠️ Supabase not configured, falling back to localStorage simulation');
+      return NextResponse.json({ 
+        error: 'Database not configured. Please configure Supabase environment variables.',
+        details: 'Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY'
+      }, { status: 500 });
+    }
+
     // Fetch all documents for the user (same fields as load API)
     const { data: documents, error: fetchError } = await supabase
       .from('documents')
@@ -25,7 +34,21 @@ export async function POST(request: NextRequest) {
 
     if (fetchError) {
       console.error('❌ Error fetching documents:', fetchError);
-      return NextResponse.json({ error: 'Failed to fetch documents' }, { status: 500 });
+      
+      // If it's a permission error, provide helpful message
+      if (fetchError.code === '42501') {
+        return NextResponse.json({ 
+          error: 'Database permission denied. Please check your Supabase configuration.',
+          details: 'The service role key may not have proper permissions or the documents table may not exist.',
+          code: fetchError.code
+        }, { status: 500 });
+      }
+      
+      return NextResponse.json({ 
+        error: 'Failed to fetch documents',
+        details: fetchError.message,
+        code: fetchError.code
+      }, { status: 500 });
     }
 
     if (!documents || documents.length === 0) {

@@ -125,6 +125,18 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // If it's a database configuration error, show helpful message
+        if (errorData.code === '42501' || errorData.error?.includes('Database permission denied')) {
+          alert(`Database Configuration Required:\n\n${errorData.details || errorData.error}\n\nPlease configure your Supabase environment variables to enable document storage.`);
+          return;
+        }
+        
+        if (errorData.error?.includes('Database not configured')) {
+          alert(`Database Not Configured:\n\n${errorData.message}\n\nPlease set up your Supabase environment variables.`);
+          return;
+        }
+        
         throw new Error(errorData.error || 'Failed to download ZIP');
       }
 
