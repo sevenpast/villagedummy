@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     // Fetch all documents for the user
     const { data: documents, error: fetchError } = await supabase
-      .from('documents')
+      .from('documents_vault')
       .select('*')
       .eq('user_id', userId);
 
@@ -40,14 +40,15 @@ export async function POST(request: NextRequest) {
     // Download each document and add to ZIP
     for (const doc of documents) {
       try {
-        if (doc.storage_path) {
+        if (doc.storage_path || doc.fileName) {
           // Download file from Supabase Storage
+          const storagePath = doc.storage_path || doc.fileName;
           const { data: fileData, error: downloadError } = await supabase.storage
             .from('documents')
-            .download(doc.storage_path);
+            .download(storagePath);
 
           if (downloadError) {
-            console.error(`❌ Error downloading ${doc.storage_path}:`, downloadError);
+            console.error(`❌ Error downloading ${storagePath}:`, downloadError);
             continue;
           }
 
@@ -55,8 +56,8 @@ export async function POST(request: NextRequest) {
           const arrayBuffer = await fileData.arrayBuffer();
           
           // Create a clean filename
-          const cleanFilename = doc.original_filename || 
-            `${doc.document_type || 'document'}_${doc.id}.pdf`;
+          const cleanFilename = doc.original_filename || doc.originalName || 
+            `${doc.document_type || doc.documentType || 'document'}_${doc.id}.pdf`;
           
           // Add file to ZIP
           zip.file(cleanFilename, arrayBuffer);
