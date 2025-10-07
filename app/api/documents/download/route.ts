@@ -1,77 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
 export async function GET(request: NextRequest) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    console.error('Supabase URL or Key is not configured in environment variables.');
-    return NextResponse.json({
-      success: false,
-      error: 'Datenbankverbindung ist nicht konfiguriert. Bitte überprüfen Sie die Server-Einstellungen.',
-    }, { status: 500 });
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
   try {
+    console.log('📥 Document download API called');
+    
     const { searchParams } = new URL(request.url);
     const documentId = searchParams.get('documentId');
     const userId = searchParams.get('userId');
 
-    if (!documentId || !userId) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Missing documentId or userId parameter' 
-      }, { status: 400 });
+    if (!documentId) {
+      return NextResponse.json({ error: 'Document ID is required' }, { status: 400 });
     }
 
-    console.log(`📥 Downloading document ${documentId} for user ${userId}`);
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    }
 
-    // Get document from database
-    const { data, error } = await supabase
-      .from('documents_vault')
-      .select('file_name, original_name, file_type, file_data')
+    // Get document metadata
+    const { data: document, error: fetchError } = await supabase
+      .from('documents')
+      .select('storage_path, file_name, file_type')
       .eq('id', documentId)
       .eq('user_id', userId)
       .single();
 
-    if (error) {
-      console.error('❌ Database error:', error);
-      return NextResponse.json({
-        success: false,
-        error: 'Document not found or access denied'
-      }, { status: 404 });
+    if (fetchError) {
+      console.error('❌ Error fetching document:', fetchError);
+      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
-    if (!data) {
-      return NextResponse.json({
-        success: false,
-        error: 'Document not found'
-      }, { status: 404 });
+    // Download file from storage
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('documents')
+      .download(document.storage_path);
+
+    if (downloadError) {
+      console.error('❌ Storage download error:', downloadError);
+      return NextResponse.json({ error: 'Failed to download file from storage' }, { status: 500 });
     }
 
-    // Convert buffer back to Uint8Array
-    const fileBuffer = new Uint8Array(data.file_data);
+    // Convert blob to buffer
+    const arrayBuffer = await fileData.arrayBuffer();
 
-    console.log(`✅ Document downloaded: ${data.original_name}`);
+    console.log(`✅ Document downloaded successfully: ${document.file_name}`);
 
-    // Return the file as a download
-    return new NextResponse(fileBuffer, {
+    // Return the file with proper headers
+    return new NextResponse(arrayBuffer, {
       status: 200,
       headers: {
-        'Content-Type': data.file_type,
-        'Content-Disposition': `attachment; filename="${data.original_name}"`,
-        'Content-Length': fileBuffer.length.toString(),
+        'Content-Type': document.file_type || 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${document.file_name}"`,
+        'Content-Length': arrayBuffer.byteLength.toString(),
       },
     });
 
   } catch (error) {
-    console.error('Download document error:', error);
+    console.error('❌ Download failed:', error);
     return NextResponse.json({
-      success: false,
-      error: 'Error downloading document'
+      error: 'Download failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

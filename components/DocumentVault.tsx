@@ -1,108 +1,143 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Upload, File, Trash2, Download, Mail, Search, Filter, Eye, Tag } from 'lucide-react';
-import DocumentRecognitionService, { DocumentAnalysis } from '../services/document-recognition-service';
+import { Upload, File, Trash2, Download, Eye, Tag, Plus } from 'lucide-react';
 
-interface StoredDocument {
-  id: number;
+interface Document {
+  id: string;
   fileName: string;
-  originalName: string;
   fileType: string;
   fileSize: number;
   documentType: string;
-  tags: string[];
-  confidence: number;
-  description: string;
   uploadedAt: string;
-  fileData?: string; // Base64 encoded file data
+  storagePath: string;
 }
 
 interface DocumentVaultProps {
   userId?: string;
 }
 
-const DocumentVault: React.FC<DocumentVaultProps> = ({ userId }) => {
-  const [documents, setDocuments] = useState<StoredDocument[]>([]);
+const DocumentVault: React.FC<DocumentVaultProps> = ({ userId = 'default' }) => {
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [selectedDocument, setSelectedDocument] = useState<StoredDocument | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
-  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
-  const [documentService, setDocumentService] = useState<DocumentRecognitionService | null>(null);
-
-  useEffect(() => {
-    try {
-      setDocumentService(new DocumentRecognitionService());
-    } catch (error) {
-      console.warn('DocumentRecognitionService initialization failed:', error);
-    }
-  }, []);
-
+  // Load documents on component mount
   useEffect(() => {
     loadDocuments();
-  }, []);
+  }, [userId]);
 
   const loadDocuments = async () => {
     try {
-      // First try to load from database
-      const response = await fetch(`/api/documents/load?userId=${userId || 'default'}`);
+      const response = await fetch(`/api/documents/load?userId=${userId}`);
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.documents) {
-          // Transform database documents to match our interface
-          const transformedDocs = data.documents.map((doc: any) => ({
-            id: doc.id,
-            fileName: doc.file_name,
-            originalName: doc.file_name,
-            fileType: doc.file_type,
-            fileSize: doc.file_size,
-            documentType: doc.document_type,
-            tags: [],
-            confidence: 100,
-            description: '',
-            uploadedAt: doc.uploaded_at
-          }));
-          setDocuments(transformedDocs);
-          return;
+          setDocuments(data.documents);
         }
-      }
-      
-      // Fallback to localStorage if database fails
-      const stored = localStorage.getItem(`documents_vault_${userId || 'default'}`);
-      if (stored) {
-        setDocuments(JSON.parse(stored));
       }
     } catch (error) {
       console.error('Failed to load documents:', error);
-      // Fallback to localStorage
-      try {
-        const stored = localStorage.getItem(`documents_vault_${userId || 'default'}`);
-        if (stored) {
-          setDocuments(JSON.parse(stored));
-        }
-      } catch (localError) {
-        console.error('Failed to load from localStorage:', localError);
-      }
     }
   };
 
-  const saveDocuments = (docs: StoredDocument[]) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    setUploadProgress('');
+
     try {
-      localStorage.setItem(`documents_vault_${userId || 'default'}`, JSON.stringify(docs));
-      setDocuments(docs);
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadProgress(`Uploading ${file.name}...`);
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('userId', userId);
+
+        const response = await fetch('/api/documents/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+
+        const result = await response.json();
+        if (result.success) {
+          console.log(`✅ Uploaded: ${file.name}`);
+        }
+      }
+
+      // Reload documents after upload
+      await loadDocuments();
+      setUploadProgress('Upload completed successfully!');
+      
+      // Clear the input
+      event.target.value = '';
+
     } catch (error) {
-      console.error('Failed to save documents:', error);
+      console.error('Upload failed:', error);
+      setUploadProgress(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsUploading(false);
+      setTimeout(() => setUploadProgress(''), 3000);
     }
   };
 
-  const deleteDocument = (documentId: number) => {
-    if (confirm('Are you sure you want to delete this document?')) {
-      const updatedDocuments = documents.filter(doc => doc.id !== documentId);
-      saveDocuments(updatedDocuments);
+  const deleteDocument = async (documentId: string) => {
+    if (!confirm('Are you sure you want to delete this document?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/documents/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ documentId, userId }),
+      });
+
+      if (response.ok) {
+        // Remove from local state
+        setDocuments(docs => docs.filter(doc => doc.id !== documentId));
+        console.log('✅ Document deleted successfully');
+      } else {
+        throw new Error('Failed to delete document');
+      }
+    } catch (error) {
+      console.error('Delete failed:', error);
+      alert(`Failed to delete document: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const downloadDocument = async (document: Document) => {
+    try {
+      const response = await fetch(`/api/documents/download?documentId=${document.id}&userId=${userId}`);
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = document.fileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        throw new Error('Failed to download document');
+      }
+    } catch (error) {
+      console.error('Download failed:', error);
+      alert(`Failed to download document: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -112,232 +147,40 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId }) => {
       return;
     }
 
-    setIsDownloadingZip(true);
+    setIsDownloading(true);
     
     try {
-      // Try the main ZIP download first
       const response = await fetch('/api/documents/download-zip', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId: userId || 'default' }),
+        body: JSON.stringify({ userId }),
       });
 
-      // If successful, download the ZIP
       if (response.ok) {
-        const zipBlob = await response.blob();
-        
-        // Create download link
-        const url = window.URL.createObjectURL(zipBlob);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `documents_${userId || 'default'}_${new Date().toISOString().split('T')[0]}.zip`;
+        a.download = `documents_${userId}_${new Date().toISOString().split('T')[0]}.zip`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        
         console.log('✅ ZIP download completed successfully');
-        return;
-      }
-
-      // If failed, try to parse error and fallback to temp ZIP
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch (e) {
-        errorData = { code: '42501', error: 'Database permission denied' };
-      }
-      
-      // Check if it's a database issue that we can handle with temp ZIP
-      if (errorData.code === '42501' || errorData.code === '22P02' || errorData.error?.includes('Database permission denied') || errorData.error?.includes('invalid input syntax')) {
-        console.log('🔄 Database issue detected, trying temporary ZIP...');
-        
-        const tempResponse = await fetch('/api/documents/temp-zip', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId: userId || 'default' }),
-        });
-
-        if (tempResponse.ok) {
-          const zipBlob = await tempResponse.blob();
-          
-          // Create download link
-          const url = window.URL.createObjectURL(zipBlob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `database_setup_instructions_${new Date().toISOString().split('T')[0]}.zip`;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-          
-          console.log('✅ Temporary ZIP download completed successfully');
-          return;
-        }
-      }
-
-      // If we get here, show error message
-      if (errorData.code === '42501' || errorData.error?.includes('Database permission denied')) {
-        alert(`Database Configuration Required:\n\n${errorData.details || errorData.error}\n\nPlease configure your Supabase environment variables to enable document storage.`);
-      } else if (errorData.error?.includes('Database not configured')) {
-        alert(`Database Not Configured:\n\n${errorData.message}\n\nPlease set up your Supabase environment variables.`);
       } else {
-        throw new Error(errorData.error || 'Failed to download ZIP');
+        throw new Error('Failed to download ZIP');
       }
-      
     } catch (error) {
-      console.error('❌ ZIP download failed:', error);
+      console.error('ZIP download failed:', error);
       alert(`Failed to download ZIP: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
-      setIsDownloadingZip(false);
+      setIsDownloading(false);
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files) return;
-
-    for (const file of Array.from(files)) {
-      await processFile(file);
-    }
-  };
-
-  const processFile = async (file: File) => {
-    setIsUploading(true);
-    setUploadProgress('Uploading file...');
-
-    try {
-      // Convert file to base64
-      const base64 = await fileToBase64(file);
-
-      setUploadProgress('Analyzing document with AI...');
-
-      let analysis: DocumentAnalysis;
-      try {
-        // Try AI analysis first if service is available
-        if (documentService) {
-          analysis = await documentService.analyzeDocument(file);
-        } else {
-          throw new Error('Document service not available');
-        }
-      } catch (error) {
-        console.warn('AI analysis failed, using basic pattern matching:', error);
-        // Fallback to basic analysis
-        analysis = {
-          documentType: 'other',
-          confidence: 0.5,
-          tags: ['other'],
-          description: 'Document uploaded successfully',
-          extractedText: '',
-          detectedLanguage: 'unknown'
-        };
-      }
-
-      setUploadProgress('Saving document...');
-
-      // Create document record
-      const newDocument: StoredDocument = {
-        id: Date.now() + Math.random(),
-        fileName: `${Date.now()}_${file.name}`,
-        originalName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-        documentType: analysis.documentType,
-        tags: analysis.tags,
-        confidence: analysis.confidence,
-        description: analysis.description,
-        uploadedAt: new Date().toISOString(),
-        fileData: base64
-      };
-
-      // Save to storage
-      const updatedDocuments = [...documents, newDocument];
-      saveDocuments(updatedDocuments);
-
-      setUploadProgress('Document uploaded successfully!');
-      setTimeout(() => setUploadProgress(''), 2000);
-
-    } catch (error) {
-      console.error('File processing failed:', error);
-      setUploadProgress('Upload failed. Please try again.');
-      setTimeout(() => setUploadProgress(''), 3000);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
-
-  const downloadDocument = (document: StoredDocument) => {
-    if (!document.fileData) return;
-
-    const link = document.createElement('a');
-    link.href = document.fileData;
-    link.download = document.originalName;
-    link.click();
-  };
-
-  const createEmailWithAttachment = (document: StoredDocument) => {
-    const mailtoLink = DocumentRecognitionService.createMailtoLink(
-      document.documentType,
-      '',
-      document.originalName
-    );
-
-    // For now, we'll open the email client and inform the user about the attachment
-    window.open(mailtoLink);
-
-    // Show instructions for manual attachment
-    alert(`Email opened! Please manually attach: ${document.originalName}\n\nNote: Automatic attachment will be implemented in a future update.`);
-  };
-
-  const filteredDocuments = documents.filter(doc => {
-    const matchesSearch = doc.originalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const matchesFilter = filterType === 'all' || doc.documentType === filterType;
-
-    return matchesSearch && matchesFilter;
-  });
-
-  const getDocumentTypeIcon = (type: string) => {
-    const icons: { [key: string]: string } = {
-      passport: '🛂',
-      driver_license: '🚗',
-      residence_permit: '🏠',
-      birth_certificate: '👶',
-      marriage_certificate: '💒',
-      diploma: '🎓',
-      contract: '📝',
-      insurance: '🛡️',
-      bank_statement: '🏦',
-      tax_document: '💰',
-      medical_record: '🏥',
-      other: '📄'
-    };
-    return icons[type] || '📄';
-  };
-
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.8) return 'text-green-600';
-    if (confidence >= 0.6) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const formatFileSize = (bytes: number) => {
+  const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -345,255 +188,143 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId }) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const documentTypes = [
-    'all', 'passport', 'driver_license', 'residence_permit', 'birth_certificate',
-    'marriage_certificate', 'diploma', 'contract', 'insurance', 'bank_statement',
-    'tax_document', 'medical_record', 'other'
-  ];
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-lg">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">📁 Document Vault</h2>
-        <p className="text-gray-600">Securely store your documents with AI-powered recognition</p>
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Document Vault</h1>
+        <p className="text-gray-600">Manage and organize your important documents</p>
       </div>
 
       {/* Upload Section */}
-      <div className="mb-6 p-4 border-2 border-dashed border-gray-300 rounded-lg">
-        <div className="text-center">
+      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">Upload Documents</h2>
+          <div className="flex items-center space-x-2">
+            <Upload className="w-5 h-5 text-gray-500" />
+            <span className="text-sm text-gray-500">Drag & drop or click to upload</span>
+          </div>
+        </div>
+
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
           <input
             type="file"
-            id="file-upload"
             multiple
-            accept="image/*,.pdf"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
             onChange={handleFileUpload}
-            className="hidden"
             disabled={isUploading}
+            className="hidden"
+            id="file-upload"
           />
           <label
             htmlFor="file-upload"
-            className={`inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer ${
-              isUploading ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+            className={`cursor-pointer ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            <Upload className="w-5 h-5 mr-2" />
-            {isUploading ? 'Processing...' : 'Upload Documents'}
-          </label>
-          <p className="mt-2 text-sm text-gray-500">
-            Supports images and PDFs. AI will automatically detect document type.
-          </p>
-          {uploadProgress && (
-            <p className="mt-2 text-sm font-medium text-blue-600">{uploadProgress}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Download All as ZIP Section */}
-      {documents.length > 0 && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="text-center">
-            <button
-              onClick={downloadAllAsZip}
-              disabled={isDownloadingZip}
-              className={`inline-flex items-center px-4 py-2 border border-blue-300 rounded-md shadow-sm text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 cursor-pointer ${
-                isDownloadingZip ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              <Download className="w-5 h-5 mr-2" />
-              {isDownloadingZip ? 'Creating ZIP...' : `Download All (${documents.length} documents)`}
-            </button>
-            <p className="mt-2 text-sm text-blue-600">
-              Download all your documents as a single ZIP file
+            <Plus className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-lg font-medium text-gray-900 mb-2">
+              {isUploading ? 'Uploading...' : 'Choose files to upload'}
             </p>
+            <p className="text-sm text-gray-500">
+              PDF, DOC, DOCX, JPG, PNG, TXT files supported
+            </p>
+          </label>
+        </div>
+
+        {uploadProgress && (
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-700">{uploadProgress}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Documents List */}
+      <div className="bg-white rounded-lg border border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Your Documents ({documents.length})
+            </h2>
+            {documents.length > 0 && (
+              <button
+                onClick={downloadAllAsZip}
+                disabled={isDownloading}
+                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                  isDownloading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                {isDownloading ? 'Creating ZIP...' : 'Download All as ZIP'}
+              </button>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Search and Filter */}
-      <div className="mb-4 flex gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Search documents..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-        <div className="relative">
-          <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            {documentTypes.map(type => (
-              <option key={type} value={type}>
-                {type === 'all' ? 'All Types' : type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-              </option>
+        {documents.length === 0 ? (
+          <div className="p-12 text-center">
+            <File className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No documents yet</h3>
+            <p className="text-gray-500">Upload your first document to get started</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {documents.map((doc) => (
+              <div key={doc.id} className="p-6 hover:bg-gray-50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex-shrink-0">
+                      <File className="w-8 h-8 text-blue-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-medium text-gray-900 truncate">
+                        {doc.fileName}
+                      </h3>
+                      <div className="flex items-center space-x-4 mt-1">
+                        <span className="text-sm text-gray-500">
+                          {formatFileSize(doc.fileSize)}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {formatDate(doc.uploadedAt)}
+                        </span>
+                        {doc.documentType && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <Tag className="w-3 h-3 mr-1" />
+                            {doc.documentType}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => downloadDocument(doc)}
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      <Download className="w-4 h-4 mr-1" />
+                      Download
+                    </button>
+                    <button
+                      onClick={() => deleteDocument(doc.id)}
+                      className="inline-flex items-center px-3 py-2 border border-red-300 shadow-sm text-sm leading-4 font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
             ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Documents Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredDocuments.map((document) => (
-          <div 
-            key={document.id} 
-            className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer relative"
-            onClick={() => {
-              setSelectedDocument(document);
-              setShowPreview(true);
-            }}
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex-1">
-                <h3 className="font-medium text-gray-800 truncate">{document.originalName}</h3>
-                <p className="text-sm text-gray-500">
-                  {document.documentType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                </p>
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteDocument(document.id);
-                }}
-                className="ml-2 p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                title="Delete document"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex flex-wrap gap-1">
-                {document.tags.slice(0, 3).map((tag, index) => {
-                  // Format the first tag (document type) specially
-                  const isDocumentType = index === 0;
-                  const displayTag = isDocumentType 
-                    ? tag.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                    : tag;
-                  
-                  return (
-                    <span
-                      key={index}
-                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        isDocumentType 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-blue-100 text-blue-800'
-                      }`}
-                    >
-                      <Tag className="w-3 h-3 mr-1" />
-                      {displayTag}
-                    </span>
-                  );
-                })}
-                {document.tags.length > 3 && (
-                  <span className="text-xs text-gray-500">+{document.tags.length - 3} more</span>
-                )}
-              </div>
-
-              <div className="flex justify-between text-xs text-gray-500 pt-2 border-t">
-                <span>{formatFileSize(document.fileSize)}</span>
-                <span>{new Date(document.uploadedAt).toLocaleDateString()}</span>
-              </div>
-            </div>
           </div>
-        ))}
+        )}
       </div>
-
-      {filteredDocuments.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          {documents.length === 0 ? (
-            <div>
-              <File className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p>No documents uploaded yet.</p>
-              <p className="text-sm">Upload your first document to get started!</p>
-            </div>
-          ) : (
-            <div>
-              <Search className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p>No documents match your search criteria.</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Preview Modal */}
-      {showPreview && selectedDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl max-h-[80vh] overflow-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">{selectedDocument.originalName}</h3>
-              <button
-                onClick={() => setShowPreview(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium text-gray-800">Document Information</h4>
-                <div className="mt-2 space-y-1 text-sm">
-                  <p><span className="font-medium">Type:</span> {selectedDocument.documentType}</p>
-                  <p><span className="font-medium">Confidence:</span> {Math.round(selectedDocument.confidence * 100)}%</p>
-                  <p><span className="font-medium">Size:</span> {formatFileSize(selectedDocument.fileSize)}</p>
-                  <p><span className="font-medium">Uploaded:</span> {new Date(selectedDocument.uploadedAt).toLocaleString()}</p>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-medium text-gray-800">Description</h4>
-                <p className="mt-1 text-sm text-gray-600">{selectedDocument.description}</p>
-              </div>
-
-              <div>
-                <h4 className="font-medium text-gray-800">Tags</h4>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {selectedDocument.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {selectedDocument.fileData && selectedDocument.fileType.startsWith('image/') && (
-                <div>
-                  <h4 className="font-medium text-gray-800">Preview</h4>
-                  <img
-                    src={selectedDocument.fileData}
-                    alt={selectedDocument.originalName}
-                    className="mt-2 max-w-full h-auto rounded border"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 flex gap-2">
-              <button
-                onClick={() => downloadDocument(selectedDocument)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Download
-              </button>
-              <button
-                onClick={() => createEmailWithAttachment(selectedDocument)}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-              >
-                Email
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

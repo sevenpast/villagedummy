@@ -17,19 +17,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // Check if Supabase is properly configured
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.warn('⚠️ Supabase not configured, falling back to localStorage simulation');
-      return NextResponse.json({ 
-        error: 'Database not configured. Please configure Supabase environment variables.',
-        details: 'Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY'
-      }, { status: 500 });
-    }
-
-    // Handle non-UUID user IDs (like 'default')
+    // Get all documents for the user
     let query = supabase
       .from('documents')
-      .select('id, file_name, file_type, file_size, document_type, uploaded_at, storage_path');
+      .select('id, file_name, file_type, file_size, document_type, uploaded_at, storage_path')
+      .order('uploaded_at', { ascending: false });
     
     // Only filter by user_id if it's a valid UUID, otherwise get all documents
     if (userId && userId !== 'default' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
@@ -40,20 +32,9 @@ export async function POST(request: NextRequest) {
 
     if (fetchError) {
       console.error('❌ Error fetching documents:', fetchError);
-      
-      // If it's a permission error, provide helpful message
-      if (fetchError.code === '42501') {
-        return NextResponse.json({ 
-          error: 'Database permission denied. Please check your Supabase configuration.',
-          details: 'The service role key may not have proper permissions or the documents table may not exist.',
-          code: fetchError.code
-        }, { status: 500 });
-      }
-      
       return NextResponse.json({ 
         error: 'Failed to fetch documents',
-        details: fetchError.message,
-        code: fetchError.code
+        details: fetchError.message 
       }, { status: 500 });
     }
 
@@ -69,32 +50,27 @@ export async function POST(request: NextRequest) {
     // Download each document and add to ZIP
     for (const doc of documents) {
       try {
-        // Use the correct field names from the database
-        const storagePath = doc.storage_path;
-        
-        if (storagePath) {
+        if (doc.storage_path) {
           // Download file from Supabase Storage
           const { data: fileData, error: downloadError } = await supabase.storage
             .from('documents')
-            .download(storagePath);
+            .download(doc.storage_path);
 
           if (downloadError) {
-            console.error(`❌ Error downloading ${storagePath}:`, downloadError);
+            console.error(`❌ Error downloading ${doc.storage_path}:`, downloadError);
             continue;
           }
 
           // Convert blob to buffer
           const arrayBuffer = await fileData.arrayBuffer();
           
-          // Create a clean filename using the correct field names
+          // Create a clean filename
           const cleanFilename = doc.file_name || `${doc.document_type || 'document'}_${doc.id}.pdf`;
           
           // Add file to ZIP
           zip.file(cleanFilename, arrayBuffer);
           
           console.log(`✅ Added ${cleanFilename} to ZIP`);
-        } else {
-          console.warn(`⚠️ No storage path found for document ${doc.id}:`, doc);
         }
       } catch (error) {
         console.error(`❌ Error processing document ${doc.id}:`, error);
@@ -102,26 +78,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate ZIP file
-    const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
-    
-    console.log('✅ ZIP file generated successfully');
+    // Check if any files were added to the ZIP
+    const zipFiles = Object.keys(zip.files);
+    if (zipFiles.length === 0) {
+      return NextResponse.json({ error: 'No files could be added to ZIP' }, { status: 404 });
+    }
 
-    // Return ZIP file as response
-    return new NextResponse(zipBuffer, {
+    // Generate ZIP file
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+    console.log(`✅ ZIP created successfully with ${zipFiles.length} files`);
+
+    // Return the ZIP file as a Blob
+    return new NextResponse(zipBlob, {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="documents_${userId}_${new Date().toISOString().split('T')[0]}.zip"`,
-        'Content-Length': zipBuffer.length.toString(),
       },
     });
 
   } catch (error) {
     console.error('❌ ZIP download failed:', error);
-    return NextResponse.json({ 
-      error: 'Failed to create ZIP file',
-      details: error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({
+      error: 'Failed to generate ZIP file',
+      details: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 500 });
   }
 }

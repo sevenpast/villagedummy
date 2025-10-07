@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
 export async function GET(request: NextRequest) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    console.error('Supabase URL or Key is not configured in environment variables.');
-    return NextResponse.json({
-      success: false,
-      error: 'Datenbankverbindung ist nicht konfiguriert. Bitte überprüfen Sie die Server-Einstellungen.',
-    }, { status: 500 });
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -31,7 +23,7 @@ export async function GET(request: NextRequest) {
     // Handle non-UUID user IDs (like 'default')
     let query = supabase
       .from('documents')
-      .select('id, file_name, file_type, file_size, document_type, uploaded_at')
+      .select('id, file_name, file_type, file_size, document_type, uploaded_at, storage_path')
       .order('uploaded_at', { ascending: false });
     
     // Only filter by user_id if it's a valid UUID, otherwise get all documents
