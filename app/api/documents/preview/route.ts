@@ -58,12 +58,19 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ Document preview loaded successfully: ${document.file_name}`);
 
+    // Clean filename for safe header usage
+    const cleanFileName = document.file_name
+      .replace(/[^\x00-\x7F]/g, '') // Remove non-ASCII characters
+      .replace(/[^a-zA-Z0-9.-]/g, '_') // Replace special chars with underscore
+      .replace(/_+/g, '_') // Replace multiple underscores with single
+      .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+
     // Return the file with proper headers for preview
     return new NextResponse(arrayBuffer, {
       status: 200,
       headers: {
         'Content-Type': document.file_type || 'application/octet-stream',
-        'Content-Disposition': `inline; filename="${document.file_name}"`,
+        'Content-Disposition': `inline; filename="${cleanFileName}"`,
         'Content-Length': arrayBuffer.byteLength.toString(),
         'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
       },
