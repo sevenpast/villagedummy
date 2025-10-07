@@ -58,12 +58,19 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ Document downloaded successfully: ${document.file_name}`);
 
+    // Clean filename for safe header usage
+    const cleanFileName = document.file_name
+      .replace(/[^\x00-\x7F]/g, '') // Remove non-ASCII characters
+      .replace(/[^a-zA-Z0-9.-]/g, '_') // Replace special chars with underscore
+      .replace(/_+/g, '_') // Replace multiple underscores with single
+      .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+
     // Return the file with proper headers
     return new NextResponse(arrayBuffer, {
       status: 200,
       headers: {
         'Content-Type': document.file_type || 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${document.file_name}"`,
+        'Content-Disposition': `attachment; filename="${cleanFileName}"`,
         'Content-Length': arrayBuffer.byteLength.toString(),
       },
     });
