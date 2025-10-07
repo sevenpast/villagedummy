@@ -23,12 +23,20 @@ export async function GET(request: NextRequest) {
     }
 
     // Get document metadata
-    const { data: document, error: fetchError } = await supabase
+    let query = supabase
       .from('documents')
       .select('storage_path, file_name, file_type')
-      .eq('id', documentId)
-      .eq('user_id', userId)
-      .single();
+      .eq('id', documentId);
+    
+    // Only filter by user_id if it's a valid UUID, otherwise get documents with null user_id
+    if (userId && userId !== 'default' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+      query = query.eq('user_id', userId);
+    } else {
+      // For non-UUID user IDs, get documents with null user_id
+      query = query.is('user_id', null);
+    }
+    
+    const { data: document, error: fetchError } = await query.single();
 
     if (fetchError) {
       console.error('❌ Error fetching document:', fetchError);

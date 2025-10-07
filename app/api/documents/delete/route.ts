@@ -21,12 +21,20 @@ export async function DELETE(request: NextRequest) {
     }
 
     // First, get the document to find the storage path
-    const { data: document, error: fetchError } = await supabase
+    let query = supabase
       .from('documents')
       .select('storage_path, file_name')
-      .eq('id', documentId)
-      .eq('user_id', userId)
-      .single();
+      .eq('id', documentId);
+    
+    // Only filter by user_id if it's a valid UUID, otherwise get documents with null user_id
+    if (userId && userId !== 'default' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+      query = query.eq('user_id', userId);
+    } else {
+      // For non-UUID user IDs, get documents with null user_id
+      query = query.is('user_id', null);
+    }
+    
+    const { data: document, error: fetchError } = await query.single();
 
     if (fetchError) {
       console.error('❌ Error fetching document:', fetchError);
@@ -44,11 +52,20 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete from database
-    const { error: dbError } = await supabase
+    let deleteQuery = supabase
       .from('documents')
       .delete()
-      .eq('id', documentId)
-      .eq('user_id', userId);
+      .eq('id', documentId);
+    
+    // Only filter by user_id if it's a valid UUID, otherwise delete documents with null user_id
+    if (userId && userId !== 'default' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+      deleteQuery = deleteQuery.eq('user_id', userId);
+    } else {
+      // For non-UUID user IDs, delete documents with null user_id
+      deleteQuery = deleteQuery.is('user_id', null);
+    }
+    
+    const { error: dbError } = await deleteQuery;
 
     if (dbError) {
       console.error('❌ Database delete error:', dbError);
