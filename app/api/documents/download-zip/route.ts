@@ -17,10 +17,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // Fetch all documents for the user
+    // Fetch all documents for the user (same fields as load API)
     const { data: documents, error: fetchError } = await supabase
       .from('documents')
-      .select('*')
+      .select('id, file_name, file_type, file_size, document_type, uploaded_at, storage_path')
       .eq('user_id', userId);
 
     if (fetchError) {
@@ -40,8 +40,8 @@ export async function POST(request: NextRequest) {
     // Download each document and add to ZIP
     for (const doc of documents) {
       try {
-        // Try different possible field names for storage path
-        const storagePath = doc.storage_path || doc.fileName || doc.file_name || doc.storagePath;
+        // Use the correct field names from the database
+        const storagePath = doc.storage_path;
         
         if (storagePath) {
           // Download file from Supabase Storage
@@ -57,9 +57,8 @@ export async function POST(request: NextRequest) {
           // Convert blob to buffer
           const arrayBuffer = await fileData.arrayBuffer();
           
-          // Create a clean filename - try different possible field names
-          const cleanFilename = doc.original_filename || doc.originalName || doc.file_name || 
-            `${doc.document_type || doc.documentType || 'document'}_${doc.id}.pdf`;
+          // Create a clean filename using the correct field names
+          const cleanFilename = doc.file_name || `${doc.document_type || 'document'}_${doc.id}.pdf`;
           
           // Add file to ZIP
           zip.file(cleanFilename, arrayBuffer);

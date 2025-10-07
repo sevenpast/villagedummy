@@ -46,14 +46,47 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId }) => {
     loadDocuments();
   }, []);
 
-  const loadDocuments = () => {
+  const loadDocuments = async () => {
     try {
+      // First try to load from database
+      const response = await fetch(`/api/documents/load?userId=${userId || 'default'}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.documents) {
+          // Transform database documents to match our interface
+          const transformedDocs = data.documents.map((doc: any) => ({
+            id: doc.id,
+            fileName: doc.file_name,
+            originalName: doc.file_name,
+            fileType: doc.file_type,
+            fileSize: doc.file_size,
+            documentType: doc.document_type,
+            tags: [],
+            confidence: 100,
+            description: '',
+            uploadedAt: doc.uploaded_at
+          }));
+          setDocuments(transformedDocs);
+          return;
+        }
+      }
+      
+      // Fallback to localStorage if database fails
       const stored = localStorage.getItem(`documents_vault_${userId || 'default'}`);
       if (stored) {
         setDocuments(JSON.parse(stored));
       }
     } catch (error) {
       console.error('Failed to load documents:', error);
+      // Fallback to localStorage
+      try {
+        const stored = localStorage.getItem(`documents_vault_${userId || 'default'}`);
+        if (stored) {
+          setDocuments(JSON.parse(stored));
+        }
+      } catch (localError) {
+        console.error('Failed to load from localStorage:', localError);
+      }
     }
   };
 
