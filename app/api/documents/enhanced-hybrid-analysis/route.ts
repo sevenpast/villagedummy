@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { enhancedOCRService } from '../../../../services/enhanced-ocr-service';
 import { enhancedGeminiAnalysisService } from '../../../../services/enhanced-gemini-analysis-service';
+import { directAnalysisService } from '../../../../services/direct-analysis-service';
 
 export async function POST(request: NextRequest) {
+  console.error('DEPRECATED ROUTE HIT: The /api/documents/enhanced-hybrid-analysis route is deprecated and should not be used. Please update the frontend to use /api/v2/analyze-document.');
   let file: File | null = null;
   
   try {
@@ -11,7 +13,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     file = formData.get('file') as File;
     const userId = formData.get('userId') as string;
-    const analysisMethod = formData.get('method') as string || 'auto'; // auto, simple, confidence, structured
+    const analysisMethod = formData.get('method') as string || 'auto'; // auto, simple, confidence, structured, direct
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -27,8 +29,12 @@ export async function POST(request: NextRequest) {
 
     // Choose analysis method
     switch (analysisMethod) {
+      case 'direct':
+        console.log('🚀 Using Method 0: Direct single-call analysis');
+        analysisResult = await performDirectAnalysis(file, imageBuffer);
+        break;
       case 'simple':
-        console.log('📝 Using Method 1: Simple text analysis');
+        console.log('📝 Using Method 1: Simple text analysis (now fixed)');
         analysisResult = await performSimpleAnalysis(file, imageBuffer);
         break;
         
@@ -76,13 +82,18 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Method 1: Simple text analysis (current approach)
+ * Method 0: Direct single-call analysis (NEW & RECOMMENDED)
+ */
+async function performDirectAnalysis(file: File, imageBuffer: Buffer) {
+  return await directAnalysisService.analyzeDocument(imageBuffer, file.name);
+}
+
+/**
+ * Method 1: Simple text analysis (FIXED - now uses direct analysis)
  */
 async function performSimpleAnalysis(file: File, imageBuffer: Buffer) {
-  // For simple analysis, we can use basic text extraction
-  const extractedText = generateTextFromFilename(file.name.toLowerCase());
-  
-  return await enhancedGeminiAnalysisService.analyzeSimpleText(extractedText, file.name);
+  console.log('-> Simple method now redirects to direct analysis for robustness.');
+  return await performDirectAnalysis(file, imageBuffer);
 }
 
 /**
@@ -111,21 +122,26 @@ async function performStructuredAnalysis(file: File, imageBuffer: Buffer) {
  * Auto method: Try all methods and pick the best result
  */
 async function performAutoAnalysis(file: File, imageBuffer: Buffer) {
-  console.log('🤖 Auto method: Trying all analysis methods...');
+  console.log('🤖 Auto method: Trying all analysis methods, starting with the most efficient...');
   
   const results = [];
-  
+
+  // 1. Try the new, efficient direct method first
   try {
-    // Try Method 1: Simple
-    console.log('📝 Trying Method 1: Simple...');
-    const simpleResult = await performSimpleAnalysis(file, imageBuffer);
-    results.push({ method: 'simple', result: simpleResult, score: simpleResult.confidence });
+    console.log('🚀 Trying Method 0: Direct...');
+    const directResult = await performDirectAnalysis(file, imageBuffer);
+    // If confidence is high, we can even return immediately
+    if (directResult.confidence > 0.85) {
+      console.log('🏆 High confidence result from Direct method. Returning immediately.');
+      return directResult;
+    }
+    results.push({ method: 'direct', result: directResult, score: directResult.confidence });
   } catch (error) {
-    console.log('⚠️ Method 1 failed:', error);
+    console.log('⚠️ Method 0 (Direct) failed:', error);
   }
   
+  // 2. Fallback to confidence-aware if direct method fails or has low confidence
   try {
-    // Try Method 2: Confidence-aware
     console.log('🎯 Trying Method 2: Confidence-aware...');
     const confidenceResult = await performConfidenceAnalysis(file, imageBuffer);
     results.push({ method: 'confidence', result: confidenceResult, score: confidenceResult.confidence });
@@ -133,8 +149,8 @@ async function performAutoAnalysis(file: File, imageBuffer: Buffer) {
     console.log('⚠️ Method 2 failed:', error);
   }
   
+  // 3. Fallback to structured analysis for very complex cases
   try {
-    // Try Method 3: Structured
     console.log('🏗️ Trying Method 3: Structured...');
     const structuredResult = await performStructuredAnalysis(file, imageBuffer);
     results.push({ method: 'structured', result: structuredResult, score: structuredResult.confidence });
@@ -146,12 +162,12 @@ async function performAutoAnalysis(file: File, imageBuffer: Buffer) {
     throw new Error('All analysis methods failed');
   }
   
-  // Pick the result with highest confidence
+  // Pick the result with highest confidence from all attempts
   const bestResult = results.reduce((best, current) => 
-    current.score > best.score ? current : best
+    (current.score > best.score) ? current : best
   );
   
-  console.log(`🏆 Best result: Method ${bestResult.method} with confidence ${bestResult.score}`);
+  console.log(`🏆 Best result after all attempts: Method ${bestResult.method} with confidence ${bestResult.score}`);
   
   return bestResult.result;
 }
@@ -249,51 +265,4 @@ function performFilenameAnalysis(file: File) {
       }
     }
   });
-}
-
-/**
- * Generate meaningful text from filename for AI analysis
- */
-function generateTextFromFilename(fileName: string): string {
-  const lowerFileName = fileName.toLowerCase();
-  
-  let textDescription = `Document filename: ${fileName}\n\n`;
-  
-  if (lowerFileName.includes('cv') || lowerFileName.includes('resume') || lowerFileName.includes('lebenslauf')) {
-    textDescription += `This appears to be a CV or resume document. The filename contains "cv", "resume", or "lebenslauf" which indicates a professional curriculum vitae or resume.`;
-  } else if (lowerFileName.includes('zertifikat') || lowerFileName.includes('certificate')) {
-    textDescription += `This appears to be a certificate document. The filename contains "certificate" or "zertifikat" which indicates educational or professional certification.`;
-  } else if (lowerFileName.includes('diplom') || lowerFileName.includes('diploma') || lowerFileName.includes('schuldiplom')) {
-    textDescription += `This appears to be a diploma document. The filename contains "diploma", "diplom", or "schuldiplom" which indicates an educational degree or qualification.`;
-  } else if (lowerFileName.includes('zeugnis') || lowerFileName.includes('transcript')) {
-    textDescription += `This appears to be a transcript or certificate document. The filename contains "zeugnis" or "transcript" which indicates academic records.`;
-  } else if (lowerFileName.includes('pass') || lowerFileName.includes('passport')) {
-    textDescription += `This appears to be a passport or identity document. The filename contains "pass" or "passport" which indicates travel or identity documentation.`;
-  } else if (lowerFileName.includes('id') || lowerFileName.includes('identity')) {
-    textDescription += `This appears to be an identity document. The filename contains "id" or "identity" which indicates personal identification.`;
-  } else if (lowerFileName.includes('contract') || lowerFileName.includes('vertrag') || lowerFileName.includes('arbeitsvertrag')) {
-    textDescription += `This appears to be a contract document. The filename contains "contract", "vertrag", or "arbeitsvertrag" which indicates a legal agreement.`;
-  } else if (lowerFileName.includes('rental') || lowerFileName.includes('miete')) {
-    textDescription += `This appears to be a rental agreement. The filename contains "rental" or "miete" which indicates housing documentation.`;
-  } else if (lowerFileName.includes('insurance') || lowerFileName.includes('versicherung')) {
-    textDescription += `This appears to be an insurance document. The filename contains "insurance" or "versicherung" which indicates coverage documentation.`;
-  } else if (lowerFileName.includes('birth') || lowerFileName.includes('geburt')) {
-    textDescription += `This appears to be a birth certificate. The filename contains "birth" or "geburt" which indicates vital records.`;
-  } else if (lowerFileName.includes('marriage') || lowerFileName.includes('heirat')) {
-    textDescription += `This appears to be a marriage certificate. The filename contains "marriage" or "heirat" which indicates marital documentation.`;
-  } else if (lowerFileName.includes('salary') || lowerFileName.includes('lohn') || lowerFileName.includes('gehalt')) {
-    textDescription += `This appears to be a salary or payroll document. The filename contains "salary", "lohn", or "gehalt" which indicates employment compensation.`;
-  } else if (lowerFileName.includes('bank') || lowerFileName.includes('konto')) {
-    textDescription += `This appears to be a banking document. The filename contains "bank" or "konto" which indicates financial documentation.`;
-  } else if (lowerFileName.includes('tax') || lowerFileName.includes('steuer')) {
-    textDescription += `This appears to be a tax document. The filename contains "tax" or "steuer" which indicates fiscal documentation.`;
-  } else if (lowerFileName.includes('medical') || lowerFileName.includes('medizin')) {
-    textDescription += `This appears to be a medical document. The filename contains "medical" or "medizin" which indicates healthcare documentation.`;
-  } else if (lowerFileName.includes('permit') || lowerFileName.includes('bewilligung')) {
-    textDescription += `This appears to be a permit or authorization document. The filename contains "permit" or "bewilligung" which indicates official authorization.`;
-  } else {
-    textDescription += `This is a document with filename "${fileName}". The document type needs to be determined based on the filename pattern.`;
-  }
-  
-  return textDescription;
 }
