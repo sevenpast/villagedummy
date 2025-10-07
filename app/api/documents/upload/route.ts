@@ -153,6 +153,12 @@ export async function POST(request: NextRequest) {
       file_size: file.size,
       storage_path: storagePath,
       document_type: finalDocumentType,
+      tags: parsedTags,
+      confidence: parsedConfidence,
+      description: `AI-analyzed document: ${finalDocumentType}`,
+      language: 'DE',
+      is_swiss_document: true,
+      extracted_text: '',
       uploaded_at: new Date().toISOString()
     };
 

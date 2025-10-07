@@ -1,5 +1,6 @@
 -- Add AI analysis columns to documents table
 -- This script adds the necessary columns for intelligent document recognition
+-- Compatible with the current database schema using gen_random_uuid()
 
 -- Add tags column (JSONB for storing array of tags)
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS tags JSONB DEFAULT '["unrecognized"]';
@@ -39,6 +40,5 @@ SET
   extracted_text = ''
 WHERE tags IS NULL OR confidence IS NULL;
 
--- Grant permissions to service role
+-- Grant permissions to service role (documents table uses gen_random_uuid(), no sequence needed)
 GRANT SELECT, INSERT, UPDATE, DELETE ON documents TO service_role;
--- Note: documents table uses gen_random_uuid(), no sequence needed

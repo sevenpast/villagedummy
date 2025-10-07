@@ -65,11 +65,11 @@ export default function VaultPage() {
             documentType: doc.document_type,
             uploadedAt: doc.uploaded_at,
             storagePath: doc.storage_path,
-            tags: ['unrecognized'],
-            confidence: 0.5,
-            description: '',
-            language: 'DE',
-            isSwissDocument: true,
+            tags: doc.tags || ['unrecognized'],
+            confidence: doc.confidence || 0.5,
+            description: doc.description || '',
+            language: doc.language || 'DE',
+            isSwissDocument: doc.is_swiss_document || true,
           })));
         }
       }
