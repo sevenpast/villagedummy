@@ -30,6 +30,7 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId }) => {
   const [selectedDocument, setSelectedDocument] = useState<StoredDocument | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
 
   const [documentService, setDocumentService] = useState<DocumentRecognitionService | null>(null);
 
@@ -69,6 +70,50 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId }) => {
     if (confirm('Are you sure you want to delete this document?')) {
       const updatedDocuments = documents.filter(doc => doc.id !== documentId);
       saveDocuments(updatedDocuments);
+    }
+  };
+
+  const downloadAllAsZip = async () => {
+    if (documents.length === 0) {
+      alert('No documents to download');
+      return;
+    }
+
+    setIsDownloadingZip(true);
+    
+    try {
+      const response = await fetch('/api/documents/download-zip', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: userId || 'default' }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to download ZIP');
+      }
+
+      // Get the ZIP file as blob
+      const zipBlob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `documents_${userId || 'default'}_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      console.log('✅ ZIP download completed successfully');
+    } catch (error) {
+      console.error('❌ ZIP download failed:', error);
+      alert(`Failed to download ZIP: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsDownloadingZip(false);
     }
   };
 
@@ -262,6 +307,27 @@ const DocumentVault: React.FC<DocumentVaultProps> = ({ userId }) => {
           )}
         </div>
       </div>
+
+      {/* Download All as ZIP Section */}
+      {documents.length > 0 && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="text-center">
+            <button
+              onClick={downloadAllAsZip}
+              disabled={isDownloadingZip}
+              className={`inline-flex items-center px-4 py-2 border border-blue-300 rounded-md shadow-sm text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 cursor-pointer ${
+                isDownloadingZip ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              <Download className="w-5 h-5 mr-2" />
+              {isDownloadingZip ? 'Creating ZIP...' : `Download All (${documents.length} documents)`}
+            </button>
+            <p className="mt-2 text-sm text-blue-600">
+              Download all your documents as a single ZIP file
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Search and Filter */}
       <div className="mb-4 flex gap-4">
