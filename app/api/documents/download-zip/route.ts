@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     // Fetch all documents for the user
     const { data: documents, error: fetchError } = await supabase
-      .from('documents_vault')
+      .from('documents')
       .select('*')
       .eq('user_id', userId);
 
@@ -40,9 +40,11 @@ export async function POST(request: NextRequest) {
     // Download each document and add to ZIP
     for (const doc of documents) {
       try {
-        if (doc.storage_path || doc.fileName) {
+        // Try different possible field names for storage path
+        const storagePath = doc.storage_path || doc.fileName || doc.file_name || doc.storagePath;
+        
+        if (storagePath) {
           // Download file from Supabase Storage
-          const storagePath = doc.storage_path || doc.fileName;
           const { data: fileData, error: downloadError } = await supabase.storage
             .from('documents')
             .download(storagePath);
@@ -55,14 +57,16 @@ export async function POST(request: NextRequest) {
           // Convert blob to buffer
           const arrayBuffer = await fileData.arrayBuffer();
           
-          // Create a clean filename
-          const cleanFilename = doc.original_filename || doc.originalName || 
+          // Create a clean filename - try different possible field names
+          const cleanFilename = doc.original_filename || doc.originalName || doc.file_name || 
             `${doc.document_type || doc.documentType || 'document'}_${doc.id}.pdf`;
           
           // Add file to ZIP
           zip.file(cleanFilename, arrayBuffer);
           
           console.log(`✅ Added ${cleanFilename} to ZIP`);
+        } else {
+          console.warn(`⚠️ No storage path found for document ${doc.id}:`, doc);
         }
       } catch (error) {
         console.error(`❌ Error processing document ${doc.id}:`, error);
