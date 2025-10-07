@@ -53,11 +53,24 @@ export default function VaultPage() {
 
   const loadDocuments = async () => {
     try {
-      const response = await fetch(`/api/documents/load-v2?userId=${userId}`);
+      const response = await fetch(`/api/documents/load?userId=${userId}`);
       if (response.ok) {
         const data = await response.json();
-        // v2 API returns documents directly as array
-        setDocuments(data || []);
+        // The load API returns { success, documents }
+        const documentsArray = data.documents || data || [];
+        
+        // Transform document_type to documentType for frontend compatibility
+        const transformedDocs = documentsArray.map((doc: any) => ({
+          ...doc,
+          fileName: doc.file_name || doc.fileName,
+          fileType: doc.file_type || doc.fileType,
+          fileSize: doc.file_size || doc.fileSize,
+          documentType: doc.document_type || doc.documentType,
+          uploadedAt: doc.uploaded_at || doc.uploadedAt,
+          storagePath: doc.storage_path || doc.storagePath,
+        }));
+        
+        setDocuments(transformedDocs);
       }
     } catch (error) {
       console.error('Failed to load documents:', error);
@@ -82,7 +95,7 @@ export default function VaultPage() {
         formData.append('userId', userId);
         // Don't provide documentType, tags, or confidence - let the server analyze intelligently
 
-        const response = await fetch('/api/documents/upload-v2', {
+        const response = await fetch('/api/documents/upload', {
           method: 'POST',
           body: formData,
         });
