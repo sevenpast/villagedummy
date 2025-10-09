@@ -1,17 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// Only create client if we have real credentials
-export const supabase = supabaseUrl.includes('placeholder') 
-  ? null 
-  : createClient(supabaseUrl, supabaseAnonKey)
+// Create Supabase client for real authentication
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Database types
 export interface User {
   id: string
   auth_user_id?: string
+  username?: string
   email: string
   first_name?: string
   last_name?: string

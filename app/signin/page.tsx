@@ -22,8 +22,8 @@ export default function SignInPage() {
         return;
       }
 
-        // Sign in with username-friendly authentication
-        const response = await fetch('/api/auth/username-signin', {
+        // Sign in with real authentication
+        const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

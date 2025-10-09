@@ -10,7 +10,8 @@ export default function SignUpPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     username: '',
-    name: '',
+    first_name: '',
+    last_name: '',
     email: '',
     password: '',
     countryOfOrigin: '',
@@ -72,9 +73,10 @@ export default function SignUpPage() {
     setError('');
 
     try {
-      // Validation - only name and password are required
+      // Validation - required fields
       const missingFields = [];
-      if (!formData.name) missingFields.push('Name');
+      if (!formData.first_name) missingFields.push('First Name');
+      if (!formData.last_name) missingFields.push('Last Name');
       if (!formData.password) missingFields.push('Password');
       
       if (missingFields.length > 0) {
@@ -91,7 +93,7 @@ export default function SignUpPage() {
       }
 
       // Create user in database
-      const response = await fetch('/api/auth/demo-signup', {
+      const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -100,8 +102,8 @@ export default function SignUpPage() {
           username: formData.username,
           email: formData.email,
           password: formData.password,
-          first_name: formData.name.split(' ')[0] || formData.name,
-          last_name: formData.name.split(' ').slice(1).join(' ') || '',
+          first_name: formData.first_name,
+          last_name: formData.last_name,
           country_of_origin: formData.countryOfOrigin,
           gender: formData.gender,
           nationality: formData.nationality,
@@ -173,18 +175,33 @@ export default function SignUpPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                    Full Name *
+                  <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">
+                    First Name *
                   </label>
                   <input
-                    id="name"
-                    name="name"
+                    id="first_name"
+                    name="first_name"
                     type="text"
                     required
-                    value={formData.name}
+                    value={formData.first_name}
                     onChange={handleInputChange}
                     className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 border-gray-300"
-                    placeholder="Enter your full name"
+                    placeholder="Enter your first name"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">
+                    Last Name *
+                  </label>
+                  <input
+                    id="last_name"
+                    name="last_name"
+                    type="text"
+                    required
+                    value={formData.last_name}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 border-gray-300"
+                    placeholder="Enter your last name"
                   />
                 </div>
                 <div>
