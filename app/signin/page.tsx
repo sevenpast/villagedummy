@@ -48,7 +48,11 @@ export default function SignInPage() {
       router.push('/dashboard');
     } catch (error) {
       console.error('Signin error:', error);
-      setError(error instanceof Error ? error.message : 'Login failed. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
+      setError(errorMessage);
+      
+      // Show user-friendly alert for better UX
+      alert(`🔐 Login Error\n\n${errorMessage}\n\n💡 Valid credentials:\n• admin / admin123\n• test / test123\n• user / user123\n• demo / demo123`);
     } finally {
       setIsLoading(false);
     }
