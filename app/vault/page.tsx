@@ -19,6 +19,11 @@ interface Document {
   isSwissDocument?: boolean;
 }
 
+interface FilterOptions {
+  documentTypes: string[];
+  tags: string[];
+}
+
 export default function VaultPage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string>('');
@@ -31,6 +36,11 @@ export default function VaultPage() {
   const [customTag, setCustomTag] = useState('');
   const [editingTag, setEditingTag] = useState<string | null>(null);
   const [editTagValue, setEditTagValue] = useState('');
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({ documentTypes: [], tags: [] });
+  const [selectedDocumentType, setSelectedDocumentType] = useState('all');
+  const [selectedTags, setSelectedTags] = useState('all');
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState('desc');
 
   useEffect(() => {
     // Get user ID from localStorage or session
@@ -74,10 +84,102 @@ export default function VaultPage() {
         }));
         
         setDocuments(transformedDocs);
+        // Update filter options based on loaded documents
+        updateFilterOptions(transformedDocs);
       }
     } catch (error) {
       console.error('Failed to load documents:', error);
     }
+  };
+
+  const updateFilterOptions = (docs: Document[]) => {
+    const documentTypes = [...new Set(docs.map(doc => doc.documentType).filter(Boolean))];
+    const allTags = [...new Set(docs.flatMap(doc => doc.tags || []))];
+    
+    setFilterOptions({
+      documentTypes: ['all', ...documentTypes],
+      tags: ['all', ...allTags]
+    });
+  };
+
+  const filterDocuments = async () => {
+    if (!userId) return;
+
+    try {
+      const params = new URLSearchParams({
+        userId,
+        documentType: selectedDocumentType,
+        tags: selectedTags,
+        sortBy,
+        sortOrder
+      });
+
+      const response = await fetch(`/api/documents/filter-by-tags?${params}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setDocuments(data.documents);
+        setFilterOptions(data.filterOptions);
+      } else {
+        console.error('Failed to filter documents:', data.error);
+      }
+    } catch (error) {
+      console.error('Error filtering documents:', error);
+    }
+  };
+
+  const updateDocumentTags = async (documentId: string, newTags: string[], documentType?: string, description?: string) => {
+    try {
+      const response = await fetch('/api/documents/update-tags', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          documentId,
+          userId,
+          tags: newTags,
+          documentType,
+          description
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update the document in the local state
+        setDocuments(prevDocs => 
+          prevDocs.map(doc => 
+            doc.id === documentId 
+              ? { ...doc, tags: newTags, documentType: documentType || doc.documentType, description: description || doc.description }
+              : doc
+          )
+        );
+        console.log('✅ Document tags updated successfully');
+      } else {
+        console.error('Failed to update document tags:', data.error);
+      }
+    } catch (error) {
+      console.error('Error updating document tags:', error);
+    }
+  };
+
+  const startEditingTag = (documentId: string, currentTag: string) => {
+    setEditingTag(documentId);
+    setEditTagValue(currentTag || '');
+  };
+
+  const saveTag = async (documentId: string) => {
+    if (editTagValue.trim()) {
+      await updateDocumentTags(documentId, [editTagValue.trim()], editTagValue.trim());
+    }
+    setEditingTag(null);
+    setEditTagValue('');
+  };
+
+  const cancelEditingTag = () => {
+    setEditingTag(null);
+    setEditTagValue('');
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -315,6 +417,8 @@ export default function VaultPage() {
               <button
                 onClick={() => router.back()}
                 className="mr-4 p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                aria-label="Go back"
+                title="Go back"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
@@ -398,6 +502,96 @@ export default function VaultPage() {
             </div>
           )}
 
+          {/* Filter and Sort Section */}
+          {documents.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Filter & Sort Documents</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Document Type Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Document Type
+                  </label>
+                  <select
+                    value={selectedDocumentType}
+                    onChange={(e) => setSelectedDocumentType(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    aria-label="Filter by document type"
+                  >
+                    {filterOptions.documentTypes.map(type => (
+                      <option key={type} value={type}>
+                        {type === 'all' ? 'All Types' : type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Tags Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tags
+                  </label>
+                  <select
+                    value={selectedTags}
+                    onChange={(e) => setSelectedTags(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    aria-label="Filter by tags"
+                  >
+                    {filterOptions.tags.map(tag => (
+                      <option key={tag} value={tag}>
+                        {tag === 'all' ? 'All Tags' : tag}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Sort By */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sort By
+                  </label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    aria-label="Sort documents by"
+                  >
+                    <option value="created_at">Upload Date</option>
+                    <option value="file_name">File Name</option>
+                    <option value="document_type">Document Type</option>
+                    <option value="file_size">File Size</option>
+                  </select>
+                </div>
+
+                {/* Sort Order */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Order
+                  </label>
+                  <select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    aria-label="Sort order"
+                  >
+                    <option value="desc">Newest First</option>
+                    <option value="asc">Oldest First</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={filterDocuments}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Document List Header */}
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-semibold text-gray-900">Your Documents ({documents.length})</h2>
@@ -422,44 +616,65 @@ export default function VaultPage() {
                         <span className="text-sm text-gray-500">
                           {formatDate(doc.uploadedAt)}
                         </span>
-                        {doc.documentType && (
-                          <div className="flex items-center space-x-2">
-                            {editingTag === doc.id ? (
-                              <div className="flex items-center space-x-1">
-                                <input
-                                  type="text"
-                                  value={editTagValue}
-                                  onChange={(e) => setEditTagValue(e.target.value)}
-                                  className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') saveTag(doc.id);
-                                    if (e.key === 'Escape') cancelEditingTag();
-                                  }}
-                                  autoFocus
-                                />
-                                <button
-                                  onClick={() => saveTag(doc.id)}
-                                  className="text-green-600 hover:text-green-800"
-                                  title="Save tag"
-                                >
-                                  ✓
-                                </button>
-                                <button
-                                  onClick={cancelEditingTag}
-                                  className="text-red-600 hover:text-red-800"
-                                  title="Cancel"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                <Tag className="w-3 h-3 mr-1" />
-                                {translateDocumentType(doc.documentType)}
-                              </span>
-                            )}
-                          </div>
-                        )}
+                        {/* Document Type and Tags */}
+                        <div className="flex flex-wrap items-center gap-1">
+                          {editingTag === doc.id ? (
+                            <div className="flex items-center space-x-1">
+                              <input
+                                type="text"
+                                value={editTagValue}
+                                onChange={(e) => setEditTagValue(e.target.value)}
+                                className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveTag(doc.id);
+                                  if (e.key === 'Escape') cancelEditingTag();
+                                }}
+                                autoFocus
+                                placeholder="Enter document type..."
+                              />
+                              <button
+                                onClick={() => saveTag(doc.id)}
+                                className="text-green-600 hover:text-green-800"
+                                title="Save tag"
+                              >
+                                ✓
+                              </button>
+                              <button
+                                onClick={cancelEditingTag}
+                                className="text-red-600 hover:text-red-800"
+                                title="Cancel"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              {doc.documentType && (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  <Tag className="w-3 h-3 mr-1" />
+                                  {translateDocumentType(doc.documentType)}
+                                </span>
+                              )}
+                              {doc.tags && doc.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {doc.tags.slice(0, 3).map((tag, index) => (
+                                    <span
+                                      key={index}
+                                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700"
+                                    >
+                                      {tag}
+                                    </span>
+                                  ))}
+                                  {doc.tags.length > 3 && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
+                                      +{doc.tags.length - 3}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
