@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,77 +13,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('🔧 Attempting login for user:', username);
-
-    // Convert username to email format if needed
+    // Convert username to email format for Supabase
     const email = username.includes('@') ? username : `${username}@village.local`;
 
+    console.log('🔧 Logging in user:', username);
+
     // Authenticate with Supabase
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (authError) {
-      console.error('❌ Authentication error:', authError.message);
-      
-      // Handle specific authentication errors
-      if (authError.message.includes('Invalid login credentials')) {
-        return NextResponse.json(
-          { error: 'Invalid username or password' },
-          { status: 401 }
-        );
-      } else if (authError.message.includes('Email not confirmed')) {
-        return NextResponse.json(
-          { error: 'Please check your email and confirm your account' },
-          { status: 401 }
-        );
-      } else {
-        return NextResponse.json(
-          { error: 'Authentication failed. Please try again.' },
-          { status: 401 }
-        );
-      }
-    }
-
-    if (!authData.user) {
+    if (error) {
+      console.error('❌ Login error:', error.message);
       return NextResponse.json(
-        { error: 'Authentication failed' },
+        { error: 'Invalid username or password' },
         { status: 401 }
       );
     }
 
-    // Fetch user profile from database
+    if (!data.user) {
+      return NextResponse.json(
+        { error: 'Login failed' },
+        { status: 401 }
+      );
+    }
+
+    // Get user profile
     const { data: userProfile, error: profileError } = await supabase
       .from('users')
       .select('*')
-      .eq('auth_user_id', authData.user.id)
+      .eq('auth_user_id', data.user.id)
       .single();
 
     if (profileError) {
-      console.error('❌ Error fetching user profile:', profileError.message);
+      console.error('❌ Profile error:', profileError.message);
       return NextResponse.json(
         { error: 'User profile not found' },
         { status: 404 }
       );
     }
 
-    // Update last login timestamp
-    await supabase
-      .from('users')
-      .update({ last_login_at: new Date().toISOString() })
-      .eq('id', userProfile.id);
-
-    console.log('✅ Login successful for user:', userProfile.username);
+    console.log('✅ Login successful:', userProfile.username);
 
     return NextResponse.json({
       success: true,
       user: userProfile,
-      session: authData.session,
     });
-
   } catch (error) {
-    console.error('❌ Login API error:', error);
+    console.error('❌ Login error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
