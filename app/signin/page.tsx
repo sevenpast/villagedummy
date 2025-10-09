@@ -37,7 +37,10 @@ export default function SignInPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+        const errorMessage = data.error || 'Login failed';
+        setError(errorMessage);
+        setIsLoading(false);
+        return;
       }
 
       // Store user data and session securely
