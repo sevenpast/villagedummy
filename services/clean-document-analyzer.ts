@@ -238,10 +238,10 @@ export class CleanDocumentAnalyzer {
 
     if (lowerName.includes('anmeldung') || lowerName.includes('registration') || lowerName.includes('schule') || lowerName.includes('kindergarten') || lowerName.includes('form')) {
       return {
-        documentType: 'Rechnungen',
-        confidence: 0.8,
-        tags: ['registration', 'school', 'form'],
-        description: 'Registration or school form',
+        documentType: 'Schule/Kindergarten',
+        confidence: 0.9,
+        tags: ['registration', 'school', 'kindergarten', 'form'],
+        description: 'School or kindergarten registration form',
         language: 'DE',
         isSwissDocument: true,
         extractedText: ''

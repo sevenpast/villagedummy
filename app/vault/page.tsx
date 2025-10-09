@@ -171,7 +171,29 @@ export default function VaultPage() {
 
   const saveTag = async (documentId: string) => {
     if (editTagValue.trim()) {
-      await updateDocumentTags(documentId, [editTagValue.trim()], editTagValue.trim());
+      // Map common tag values to document types
+      const tagToDocumentType: { [key: string]: string } = {
+        'passport': 'Reisepass/ID',
+        'pass': 'Reisepass/ID',
+        'id': 'Reisepass/ID',
+        'school': 'Schule/Kindergarten',
+        'kindergarten': 'Schule/Kindergarten',
+        'anmeldung': 'Schule/Kindergarten',
+        'diploma': 'Diplome & Zertifikate',
+        'certificate': 'Diplome & Zertifikate',
+        'zeugnis': 'Diplome & Zertifikate',
+        'work': 'Arbeitsvertrag',
+        'employment': 'Arbeitsvertrag',
+        'rental': 'Mietvertrag',
+        'insurance': 'Versicherung',
+        'tax': 'Steuer',
+        'bank': 'Bank',
+        'medical': 'Medizinisch',
+        'legal': 'Rechtlich'
+      };
+      
+      const newDocumentType = tagToDocumentType[editTagValue.toLowerCase()] || editTagValue.trim();
+      await updateDocumentTags(documentId, [editTagValue.trim()], newDocumentType);
     }
     setEditingTag(null);
     setEditTagValue('');
@@ -503,7 +525,7 @@ export default function VaultPage() {
           )}
 
           {/* Filter and Sort Section */}
-          {documents.length > 0 && (
+          {documents.length > 0 ? (
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Filter & Sort Documents</h3>
               
@@ -590,6 +612,11 @@ export default function VaultPage() {
                 </button>
               </div>
             </div>
+          ) : (
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Filter & Sort Documents</h3>
+              <p className="text-gray-500">Upload documents to see filtering and sorting options.</p>
+            </div>
           )}
 
           {/* Document List Header */}
@@ -620,18 +647,26 @@ export default function VaultPage() {
                         <div className="flex flex-wrap items-center gap-1">
                           {editingTag === doc.id ? (
                             <div className="flex items-center space-x-1">
-                              <input
-                                type="text"
+                              <select
                                 value={editTagValue}
                                 onChange={(e) => setEditTagValue(e.target.value)}
                                 className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') saveTag(doc.id);
-                                  if (e.key === 'Escape') cancelEditingTag();
-                                }}
                                 autoFocus
-                                placeholder="Enter document type..."
-                              />
+                              >
+                                <option value="">Select document type...</option>
+                                <option value="Reisepass/ID">Reisepass/ID</option>
+                                <option value="Schule/Kindergarten">Schule/Kindergarten</option>
+                                <option value="Diplome & Zertifikate">Diplome & Zertifikate</option>
+                                <option value="Arbeitsvertrag">Arbeitsvertrag</option>
+                                <option value="Mietvertrag">Mietvertrag</option>
+                                <option value="Versicherung">Versicherung</option>
+                                <option value="Steuer">Steuer</option>
+                                <option value="Bank">Bank</option>
+                                <option value="Familie">Familie</option>
+                                <option value="Medizinisch">Medizinisch</option>
+                                <option value="Rechtlich">Rechtlich</option>
+                                <option value="Sonstiges">Sonstiges</option>
+                              </select>
                               <button
                                 onClick={() => saveTag(doc.id)}
                                 className="text-green-600 hover:text-green-800"
@@ -671,6 +706,12 @@ export default function VaultPage() {
                                     </span>
                                   )}
                                 </div>
+                              )}
+                              {(!doc.documentType || doc.documentType === 'Unbekanntes Dokument') && (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  <Tag className="w-3 h-3 mr-1" />
+                                  Unknown Document
+                                </span>
                               )}
                             </>
                           )}
