@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, AlertCircle, Building, ArrowLeft } from 'lucide-react';
-import SmartFormOverlay from '../../../components/SmartFormOverlay';
+import IntelligentPDFProcessor from '../../../components/IntelligentPDFProcessor';
 
 export default function Task3Page() {
   const router = useRouter();
@@ -781,29 +781,33 @@ export default function Task3Page() {
               </div>
             )}
 
-            {/* Smart PDF Form Overlay Section */}
+            {/* PDF Form Upload Section */}
             {showFormUpload && taskStatus !== 'completed' && (
               <div className="space-y-6">
-           <div className="flex items-center justify-between">
-             <h3 className="text-lg font-semibold text-gray-900">
-               Upload PDF Form
-             </h3>
-             <button
-               onClick={() => setShowFormUpload(false)}
-               className="text-gray-600 hover:text-gray-800"
-             >
-               Cancel
-             </button>
-           </div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Upload PDF Form
+                  </h3>
+                  <button
+                    onClick={() => setShowFormUpload(false)}
+                    className="text-gray-600 hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                </div>
 
-
-                <SmartFormOverlay 
-                  userId={user?.id || 'default'} 
+                {/* Intelligent PDF Processor */}
+                <IntelligentPDFProcessor 
+                  userData={user}
+                  onFilledPDF={(pdfBlob) => {
+                    console.log('PDF filled successfully:', pdfBlob);
+                  }}
                   onComplete={() => {
                     setShowFormUpload(false);
                     handleMarkCompleted();
                   }}
                 />
+
               </div>
             )}
 

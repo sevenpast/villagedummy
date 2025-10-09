@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Home, User, Clock, CheckCircle2, Settings, Upload, Calendar, MapPin, Edit2, X, Building, GraduationCap, Vault } from 'lucide-react';
+import { FileText, Home, User, Clock, CheckCircle2, Settings, Upload, Calendar, MapPin, Edit2, X, Building, GraduationCap, Vault, LogOut } from 'lucide-react';
 import SwissPlaceAutocomplete from '../../components/SwissPlaceAutocomplete';
 import EUStatusIndicator from '../../components/EUStatusIndicator';
 
@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [children, setChildren] = useState<any[]>([]);
   const [profileFormData, setProfileFormData] = useState<any>({});
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Calculate actual profile completeness
   const calculateProfileCompleteness = (userData: any) => {
@@ -136,6 +137,51 @@ export default function DashboardPage() {
       loadMockTasks(userData);
     } finally {
       setLoadingTasks(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (!confirm('Are you sure you want to logout?')) {
+      return;
+    }
+
+    setIsLoggingOut(true);
+    
+    try {
+      // Call logout API
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Clear localStorage
+        localStorage.removeItem('user');
+        localStorage.removeItem('session');
+        localStorage.removeItem('user_profile');
+        
+        // Redirect to signin page
+        router.push('/signin');
+        console.log('Logged out successfully');
+      } else {
+        console.error('Logout API failed, but clearing local data anyway');
+        // Clear localStorage even if API fails
+        localStorage.removeItem('user');
+        localStorage.removeItem('session');
+        localStorage.removeItem('user_profile');
+        router.push('/signin');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Clear localStorage even if there's an error
+      localStorage.removeItem('user');
+      localStorage.removeItem('session');
+      localStorage.removeItem('user_profile');
+      router.push('/signin');
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -393,7 +439,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => router.push('/vault')}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm flex items-center gap-2"
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition font-medium text-sm flex items-center gap-2"
               >
                 <FileText className="w-4 h-4" />
                 Document Vault
@@ -415,9 +461,17 @@ export default function DashboardPage() {
                   });
                   setShowProfileModal(true);
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm"
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition font-medium text-sm"
               >
                 Profile Settings
+              </button>
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
               </button>
               <span className="text-sm text-gray-700">Welcome, {user.first_name}!</span>
             </div>

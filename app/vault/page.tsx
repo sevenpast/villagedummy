@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Upload, File, Trash2, Download, Eye, Tag } from 'lucide-react';
+import { ArrowLeft, Upload, File, Trash2, Download, Eye, Tag, Edit2, Check, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Document {
@@ -28,6 +28,13 @@ export default function VaultPage() {
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [editingDocumentType, setEditingDocumentType] = useState<string | null>(null);
+  const [tempDocumentType, setTempDocumentType] = useState<string>('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'type' | 'size'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   useEffect(() => {
     // Get user ID from localStorage or session
@@ -87,15 +94,15 @@ export default function VaultPage() {
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        setUploadProgress(`Analyzing document with AI...`);
+        setUploadProgress(`Analyzing document...`);
         
         // Let the server handle intelligent document analysis
         const formData = new FormData();
         formData.append('file', file);
         formData.append('userId', userId);
-        // Don't provide documentType, tags, or confidence - let the server analyze intelligently
+        // Enhanced OCR + Gemini analysis will handle everything
 
-        const response = await fetch('/api/documents/upload', {
+        const response = await fetch('/api/documents/intelligent-upload', {
           method: 'POST',
           body: formData,
         });
@@ -230,6 +237,120 @@ export default function VaultPage() {
     return new Date(dateString).toLocaleDateString();
   };
 
+  // Get unique document types for filter dropdown
+  const getUniqueDocumentTypes = () => {
+    const types = documents.map(doc => doc.documentType).filter(Boolean);
+    return Array.from(new Set(types));
+  };
+
+  // Filter and sort documents
+  const getFilteredAndSortedDocuments = () => {
+    let filtered = documents;
+
+    // Filter by document type
+    if (filterType !== 'all') {
+      filtered = filtered.filter(doc => doc.documentType === filterType);
+    }
+
+    // Filter by search query
+    if (searchQuery) {
+      filtered = filtered.filter(doc => 
+        doc.fileName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (doc.documentType && doc.documentType.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
+    // Sort documents
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          comparison = a.fileName.localeCompare(b.fileName);
+          break;
+        case 'date':
+          comparison = new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime();
+          break;
+        case 'type':
+          comparison = (a.documentType || '').localeCompare(b.documentType || '');
+          break;
+        case 'size':
+          comparison = a.fileSize - b.fileSize;
+          break;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return filtered;
+  };
+
+  const startEditingDocumentType = (documentId: string, currentDocumentType: string) => {
+    setEditingDocumentType(documentId);
+    setTempDocumentType(currentDocumentType);
+    setShowCustomInput(false);
+  };
+
+  const cancelEditingDocumentType = () => {
+    setEditingDocumentType(null);
+    setTempDocumentType('');
+    setShowCustomInput(false);
+  };
+
+  const predefinedTags = [
+    'Passport/ID',
+    'Diplomas & Certificates', 
+    'Employment Contract',
+    'Rental Agreement',
+    'Payroll',
+    'Invoices',
+    'Insurance Documents',
+    'Birth Certificate',
+    'Marriage Certificate',
+    'Residence Permit',
+    'Banking Documents',
+    'Tax Documents',
+    'Medical Documents',
+    'Unknown Document'
+  ];
+
+  const saveDocumentType = async (documentId: string) => {
+    try {
+      const response = await fetch('/api/documents/update-document-type', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          documentId, 
+          documentType: tempDocumentType,
+          userId 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update document type');
+      }
+
+      // Update the local state
+      setDocuments(prevDocs => 
+        prevDocs.map(doc => 
+          doc.id === documentId 
+            ? { ...doc, documentType: tempDocumentType }
+            : doc
+        )
+      );
+
+      setEditingDocumentType(null);
+      setTempDocumentType('');
+      setShowCustomInput(false);
+      console.log('✅ Document type updated successfully');
+    } catch (error) {
+      console.error('Failed to update document type:', error);
+      alert(`Failed to update document type: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   // Translate document types to English
   const translateDocumentType = (documentType: string): string => {
     const translations: { [key: string]: string } = {
@@ -329,16 +450,102 @@ export default function VaultPage() {
           )}
 
           {/* Document List Header */}
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold text-gray-900">Your Documents ({documents.length})</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold text-gray-900">Your Documents ({getFilteredAndSortedDocuments().length})</h2>
+          </div>
+
+          {/* Search and Filter Controls */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Search */}
+              <div>
+                <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                <input
+                  id="search"
+                  type="text"
+                  placeholder="Search documents..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Filter by Type */}
+              <div>
+                <label htmlFor="filter" className="block text-sm font-medium text-gray-700 mb-1">Filter by Type</label>
+                <select
+                  id="filter"
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="all">All Types</option>
+                  {getUniqueDocumentTypes().map((type) => (
+                    <option key={type} value={type}>
+                      {translateDocumentType(type)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Sort by */}
+              <div>
+                <label htmlFor="sort" className="block text-sm font-medium text-gray-700 mb-1">Sort by</label>
+                <select
+                  id="sort"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'name' | 'date' | 'type' | 'size')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="date">Date</option>
+                  <option value="name">Name</option>
+                  <option value="type">Type</option>
+                  <option value="size">Size</option>
+                </select>
+              </div>
+
+              {/* Sort Order */}
+              <div>
+                <label htmlFor="order" className="block text-sm font-medium text-gray-700 mb-1">Order</label>
+                <select
+                  id="order"
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="desc">Newest First</option>
+                  <option value="asc">Oldest First</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Clear Filters */}
+            {(searchQuery || filterType !== 'all') && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setFilterType('all');
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  Clear all filters
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Document List */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {documents.length === 0 ? (
-              <p className="text-gray-500 col-span-full text-center">No documents uploaded yet.</p>
+            {getFilteredAndSortedDocuments().length === 0 ? (
+              <p className="text-gray-500 col-span-full text-center">
+                {documents.length === 0 
+                  ? "No documents uploaded yet." 
+                  : "No documents match your current filters."
+                }
+              </p>
             ) : (
-              documents.map((doc) => (
+              getFilteredAndSortedDocuments().map((doc) => (
                 <div
                   key={doc.id}
                   className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col justify-between"
@@ -352,11 +559,77 @@ export default function VaultPage() {
                         <span className="text-sm text-gray-500">
                           {formatDate(doc.uploadedAt)}
                         </span>
-                        {doc.documentType && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            <Tag className="w-3 h-3 mr-1" />
-                            {translateDocumentType(doc.documentType)}
-                          </span>
+                        {/* Main Document Type - Editable */}
+                        <div className="flex items-center space-x-2">
+                          {editingDocumentType === doc.id ? (
+                            <div className="flex items-center space-x-2">
+                              <select
+                                value={tempDocumentType}
+                                onChange={(e) => {
+                                  if (e.target.value === 'custom') {
+                                    setShowCustomInput(true);
+                                    setTempDocumentType('');
+                                  } else {
+                                    setTempDocumentType(e.target.value);
+                                    setShowCustomInput(false);
+                                  }
+                                }}
+                                className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              >
+                                <option value="">Select document type...</option>
+                                {predefinedTags.map((tag) => (
+                                  <option key={tag} value={tag}>
+                                    {tag}
+                                  </option>
+                                ))}
+                                <option value="custom">Custom type...</option>
+                              </select>
+                              <button
+                                onClick={() => saveDocumentType(doc.id)}
+                                className="p-1 text-green-600 hover:text-green-800"
+                                title="Save document type"
+                              >
+                                <Check className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={cancelEditingDocumentType}
+                                className="p-1 text-red-600 hover:text-red-800"
+                                title="Cancel editing"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              {doc.documentType ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  <Tag className="w-3 h-3 mr-1" />
+                                  {translateDocumentType(doc.documentType)}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-400 italic">No type</span>
+                              )}
+                              <button
+                                onClick={() => startEditingDocumentType(doc.id, doc.documentType || '')}
+                                className="p-1 text-gray-400 hover:text-gray-600"
+                                title="Edit document type"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {showCustomInput && editingDocumentType === doc.id && (
+                          <div className="mt-2">
+                            <input
+                              type="text"
+                              value={tempDocumentType}
+                              onChange={(e) => setTempDocumentType(e.target.value)}
+                              placeholder="Enter custom document type"
+                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              autoFocus
+                            />
+                          </div>
                         )}
                       </div>
                     </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, AlertCircle, GraduationCap, FileText, CheckSquare, Upload, Loader2, Download } from 'lucide-react';
-import SmartFormOverlay from '../../../components/SmartFormOverlay';
+import IntelligentPDFProcessor from '../../../components/IntelligentPDFProcessor';
 
 // All data now comes from real database - no mock data
 
@@ -584,14 +584,18 @@ export default function Task4Page() {
              </button>
            </div>
 
-
-                <SmartFormOverlay 
-                  userId={user?.id || 'default'} 
+                {/* Intelligent PDF Processor */}
+                <IntelligentPDFProcessor 
+                  userData={user}
+                  onFilledPDF={(pdfBlob) => {
+                    console.log('PDF filled successfully:', pdfBlob);
+                  }}
                   onComplete={() => {
                     setShowUpload(false);
                     handleMarkCompleted();
                   }}
                 />
+
               </div>
             )}
 

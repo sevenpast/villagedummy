@@ -1,333 +1,221 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { ocrPreprocessingService, PreprocessingResult } from './ocr-preprocessing-service';
 
-export interface OCRWord {
-  text: string;
-  confidence: number;
-  boundingBox: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-}
+const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY!);
 
 export interface OCRResult {
   text: string;
-  words: OCRWord[];
   confidence: number;
-  language: string;
-  preprocessing: PreprocessingResult['metadata'];
-}
-
-export interface StructuredOCRResult {
-  pages: Array<{
+  layout: {
     blocks: Array<{
-      paragraphs: Array<{
-        words: OCRWord[];
-        confidence: number;
-      }>;
+      text: string;
       confidence: number;
+      boundingBox: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      };
     }>;
+  };
+  images: Array<{
+    description: string;
     confidence: number;
+    position: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
   }>;
-  overallConfidence: number;
-  preprocessing: PreprocessingResult['metadata'];
+  metadata: {
+    pageCount: number;
+    language: string;
+    documentType: string;
+    hasImages: boolean;
+    hasTables: boolean;
+    hasForms: boolean;
+  };
 }
 
 export class EnhancedOCRService {
-  private genAI: GoogleGenerativeAI;
+  private model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  private fallbackModel = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
 
-  constructor() {
-    this.genAI = new GoogleGenerativeAI(
-      process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
-    );
-  }
-
-  /**
-   * Enhanced OCR with preprocessing and confidence scores
-   */
-  async extractTextWithConfidence(imageBuffer: Buffer): Promise<OCRResult> {
-    console.log('🔍 Starting enhanced OCR with confidence scores...');
-
+  async analyzeDocument(file: File): Promise<OCRResult> {
     try {
-      // Step 1: Preprocessing
-      const preprocessingResult = await ocrPreprocessingService.preprocessImage(imageBuffer);
-      console.log('✅ Preprocessing completed');
+      console.log('🔍 Starting enhanced OCR analysis for:', file.name);
 
-      // Step 2: OCR with Gemini Vision
-      const ocrResult = await this.performGeminiOCR(preprocessingResult.processedImageBuffer);
-      console.log('✅ Gemini OCR completed');
+      // Convert file to base64 for Gemini Vision
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = Buffer.from(arrayBuffer).toString('base64');
+      const mimeType = file.type;
 
-      return {
-        text: ocrResult.text,
-        words: ocrResult.words,
-        confidence: ocrResult.confidence,
-        language: ocrResult.language,
-        preprocessing: preprocessingResult.metadata
-      };
+      // Step 1: Comprehensive OCR Analysis with Gemini Vision
+      const ocrPrompt = `
+        Analyze this document comprehensively and extract ALL information. Provide detailed analysis in JSON format.
 
-    } catch (error) {
-      console.error('❌ Enhanced OCR failed:', error);
-      
-      // Fallback to simple text extraction
-      return this.fallbackTextExtraction(imageBuffer);
-    }
-  }
-
-  /**
-   * Structured OCR for complex layouts (tables, forms)
-   */
-  async extractStructuredText(imageBuffer: Buffer): Promise<StructuredOCRResult> {
-    console.log('🏗️ Starting structured OCR for complex layouts...');
-
-    try {
-      // Step 1: Preprocessing
-      const preprocessingResult = await ocrPreprocessingService.preprocessImage(imageBuffer);
-      console.log('✅ Preprocessing completed');
-
-      // Step 2: Structured OCR with Gemini Vision
-      const structuredResult = await this.performStructuredGeminiOCR(preprocessingResult.processedImageBuffer);
-      console.log('✅ Structured Gemini OCR completed');
-
-      return {
-        pages: structuredResult.pages,
-        overallConfidence: structuredResult.overallConfidence,
-        preprocessing: preprocessingResult.metadata
-      };
-
-    } catch (error) {
-      console.error('❌ Structured OCR failed:', error);
-      
-      // Fallback to simple OCR
-      const simpleResult = await this.extractTextWithConfidence(imageBuffer);
-      return {
-        pages: [{
-          blocks: [{
-            paragraphs: [{
-              words: simpleResult.words,
-              confidence: simpleResult.confidence
-            }],
-            confidence: simpleResult.confidence
-          }],
-          confidence: simpleResult.confidence
-        }],
-        overallConfidence: simpleResult.confidence,
-        preprocessing: simpleResult.preprocessing
-      };
-    }
-  }
-
-  /**
-   * Perform OCR using Gemini Vision with confidence scores
-   */
-  private async performGeminiOCR(imageBuffer: Buffer): Promise<{
-    text: string;
-    words: OCRWord[];
-    confidence: number;
-    language: string;
-  }> {
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-    const prompt = `
-**Rolle:** Du bist ein hochpräziser OCR-Service mit Konfidenzbewertung.
-
-**Aufgabe:** 
-1. Extrahiere ALLEN Text aus dem Bild
-2. Für jedes Wort: Gib einen Konfidenzwert von 0.0 bis 1.0 an
-3. Bestimme die Sprache des Dokuments
-4. Gib die Position jedes Wortes an (x, y, width, height)
-
-**Wichtige Regeln:**
-- Konfidenz 0.9-1.0: Klar lesbar, perfekte Qualität
-- Konfidenz 0.7-0.9: Gut lesbar, kleine Unsicherheiten
-- Konfidenz 0.5-0.7: Lesbar, aber unsicher
-- Konfidenz 0.3-0.5: Schwierig lesbar, viele Unsicherheiten
-- Konfidenz 0.0-0.3: Sehr unsicher oder unlesbar
-
-**Antwortformat (JSON):**
-{
-  "text": "Vollständiger extrahierter Text",
-  "words": [
-    {
-      "text": "Wort",
-      "confidence": 0.95,
-      "boundingBox": {
-        "x": 100,
-        "y": 50,
-        "width": 40,
-        "height": 20
-      }
-    }
-  ],
-  "confidence": 0.85,
-  "language": "DE"
-}
-`;
-
-    try {
-      const result = await model.generateContent([
-        prompt,
-        {
-          inlineData: {
-            data: imageBuffer.toString('base64'),
-            mimeType: 'image/png'
-          }
-        }
-      ]);
-
-      const response = await result.response;
-      const text = response.text();
-      
-      console.log('🤖 Gemini OCR raw response:', text);
-
-      // Parse JSON response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
+        Document: ${file.name}
         
-        return {
-          text: parsed.text || '',
-          words: parsed.words || [],
-          confidence: parsed.confidence || 0.5,
-          language: parsed.language || 'DE'
-        };
-      } else {
-        throw new Error('No valid JSON found in Gemini response');
-      }
-
-    } catch (error) {
-      console.error('❌ Gemini OCR failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Perform structured OCR for complex layouts
-   */
-  private async performStructuredGeminiOCR(imageBuffer: Buffer): Promise<{
-    pages: Array<{
-      blocks: Array<{
-        paragraphs: Array<{
-          words: OCRWord[];
-          confidence: number;
-        }>;
-        confidence: number;
-      }>;
-      confidence: number;
-    }>;
-    overallConfidence: number;
-  }> {
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-    const prompt = `
-**Rolle:** Du bist ein Experte für strukturierte Dokumentenanalyse.
-
-**Aufgabe:** 
-1. Analysiere die Struktur des Dokuments (Absätze, Tabellen, Spalten)
-2. Extrahiere Text mit Konfidenzwerten
-3. Erkenne Layout-Elemente (Überschriften, Tabellen, Schlüssel-Wert-Paare)
-4. Gruppiere Wörter in logische Blöcke und Absätze
-
-**Struktur-Erkennung:**
-- Erkenne Tabellen und behalte Spaltenstruktur bei
-- Identifiziere Schlüssel-Wert-Paare (z.B. "Name: Andy Hablützel")
-- Gruppiere verwandte Informationen
-- Erkenne Überschriften und Absätze
-
-**Antwortformat (JSON):**
-{
-  "pages": [
-    {
-      "blocks": [
+        Please analyze and return a JSON object with the following structure:
         {
-          "paragraphs": [
+          "text": "All extracted text content",
+          "confidence": 0.95,
+          "layout": {
+            "blocks": [
+              {
+                "text": "Text content of this block",
+                "confidence": 0.9,
+                "boundingBox": {"x": 100, "y": 200, "width": 300, "height": 50}
+              }
+            ]
+          },
+          "images": [
             {
-              "words": [
-                {
-                  "text": "Wort",
-                  "confidence": 0.95,
-                  "boundingBox": {
-                    "x": 100,
-                    "y": 50,
-                    "width": 40,
-                    "height": 20
-                  }
-                }
-              ],
-              "confidence": 0.90
+              "description": "Description of image content",
+              "confidence": 0.8,
+              "position": {"x": 50, "y": 100, "width": 200, "height": 150}
             }
           ],
-          "confidence": 0.90
+          "metadata": {
+            "pageCount": 1,
+            "language": "German/English/French/Italian",
+            "documentType": "passport/contract/certificate/invoice/etc",
+            "hasImages": true/false,
+            "hasTables": true/false,
+            "hasForms": true/false
+          }
         }
-      ],
-      "confidence": 0.90
-    }
-  ],
-  "overallConfidence": 0.90
-}
-`;
 
+        IMPORTANT:
+        - Extract ALL visible text, including headers, labels, values, signatures
+        - Identify all images, logos, stamps, signatures
+        - Determine document structure (forms, tables, paragraphs)
+        - Detect language(s) used
+        - Provide confidence scores for each element
+        - Be thorough and accurate
+      `;
+
+      let result;
+      try {
+        result = await this.model.generateContent([
+          ocrPrompt,
+          {
+            inlineData: {
+              data: base64,
+              mimeType: mimeType
+            }
+          }
+        ]);
+      } catch (modelError) {
+        console.log('⚠️ Primary model failed, trying fallback model...');
+        result = await this.fallbackModel.generateContent([
+          ocrPrompt,
+          {
+            inlineData: {
+              data: base64,
+              mimeType: mimeType
+            }
+          }
+        ]);
+      }
+
+      const response = await result.response;
+      const text = response.text();
+      
+      // Parse JSON response
+      let ocrData: OCRResult;
+      try {
+        // Extract JSON from response (handle markdown formatting)
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          ocrData = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('No JSON found in response');
+        }
+      } catch (parseError) {
+        console.error('❌ Failed to parse OCR JSON:', parseError);
+        // Fallback: create basic structure
+        ocrData = {
+          text: text,
+          confidence: 0.7,
+          layout: { blocks: [] },
+          images: [],
+          metadata: {
+            pageCount: 1,
+            language: 'unknown',
+            documentType: 'unknown',
+            hasImages: false,
+            hasTables: false,
+            hasForms: false
+          }
+        };
+      }
+
+      console.log('✅ Enhanced OCR analysis completed:', {
+        textLength: ocrData.text.length,
+        blocks: ocrData.layout.blocks.length,
+        images: ocrData.images.length,
+        confidence: ocrData.confidence
+      });
+
+      return ocrData;
+
+    } catch (error) {
+      console.error('❌ Enhanced OCR analysis failed:', error);
+      
+      // Fallback: Simple text extraction without vision
+      console.log('🔄 Trying simple text extraction fallback...');
+      try {
+        const simpleText = await this.extractTextFromPDF(file);
+        return {
+          text: simpleText,
+          confidence: 0.5,
+          layout: { blocks: [] },
+          images: [],
+          metadata: {
+            pageCount: 1,
+            language: 'unknown',
+            documentType: 'unknown',
+            hasImages: false,
+            hasTables: false,
+            hasForms: false
+          }
+        };
+      } catch (fallbackError) {
+        console.error('❌ Fallback also failed:', fallbackError);
+        throw new Error(`OCR analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+  }
+
+  async extractTextFromPDF(file: File): Promise<string> {
     try {
-      const result = await model.generateContent([
-        prompt,
+      // For PDFs, try to extract text directly first
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = Buffer.from(arrayBuffer).toString('base64');
+
+      const textPrompt = `
+        Extract all text content from this PDF document. Return only the extracted text, no formatting or explanations.
+        
+        Document: ${file.name}
+      `;
+
+      const result = await this.model.generateContent([
+        textPrompt,
         {
           inlineData: {
-            data: imageBuffer.toString('base64'),
-            mimeType: 'image/png'
+            data: base64,
+            mimeType: 'application/pdf'
           }
         }
       ]);
 
       const response = await result.response;
-      const text = response.text();
-      
-      console.log('🤖 Gemini Structured OCR raw response:', text);
-
-      // Parse JSON response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        
-        return {
-          pages: parsed.pages || [],
-          overallConfidence: parsed.overallConfidence || 0.5
-        };
-      } else {
-        throw new Error('No valid JSON found in Gemini structured response');
-      }
+      return response.text();
 
     } catch (error) {
-      console.error('❌ Gemini Structured OCR failed:', error);
-      throw error;
+      console.error('❌ PDF text extraction failed:', error);
+      return '';
     }
   }
-
-  /**
-   * Fallback text extraction when advanced OCR fails
-   */
-  private fallbackTextExtraction(imageBuffer: Buffer): OCRResult {
-    console.log('⚠️ Using fallback text extraction');
-    
-    return {
-      text: 'Text extraction failed - using fallback',
-      words: [{
-        text: 'fallback',
-        confidence: 0.1,
-        boundingBox: { x: 0, y: 0, width: 100, height: 20 }
-      }],
-      confidence: 0.1,
-      language: 'DE',
-      preprocessing: {
-        originalSize: { width: 0, height: 0 },
-        processedSize: { width: 0, height: 0 },
-        deskewAngle: 0,
-        binarizationThreshold: 128,
-        noiseRemoved: false,
-        scalingFactor: 1
-      }
-    };
-  }
 }
-
-export const enhancedOCRService = new EnhancedOCRService();
