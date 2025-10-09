@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
     const documentType = formData.get('documentType') as string;
     const tags = formData.get('tags') as string;
     const confidence = formData.get('confidence') as string;
+    const customTag = formData.get('customTag') as string;
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -60,15 +61,21 @@ export async function POST(request: NextRequest) {
     let finalIsSwissDocument = true;
     let finalExtractedText = '';
     
-    if (!finalDocumentType) {
+    // Use custom tag if provided by user
+    if (customTag && customTag.trim()) {
+      finalDocumentType = customTag.trim();
+      finalTags = [customTag.trim().toLowerCase()];
+      finalConfidence = 1.0; // User-provided tags have highest confidence
+      finalDescription = `User-defined tag: ${customTag.trim()}`;
+      console.log(`🏷️ Using custom tag from user: "${customTag.trim()}"`);
+    } else if (!finalDocumentType) {
       try {
-        // Call enhanced hybrid OCR + AI analysis API
+        // Call clean document analysis API
         const analysisFormData = new FormData();
         analysisFormData.append('file', file);
         analysisFormData.append('userId', userId);
-        analysisFormData.append('method', 'auto'); // Use auto method to try all approaches
 
-        const analysisResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/documents/enhanced-hybrid-analysis`, {
+        const analysisResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/documents/analyze-clean`, {
           method: 'POST',
           body: analysisFormData,
         });
@@ -85,15 +92,15 @@ export async function POST(request: NextRequest) {
             finalIsSwissDocument = analysis.isSwissDocument || true;
             finalExtractedText = analysis.extractedText || '';
             
-            console.log(`✅ Hybrid OCR + AI Analysis completed: ${finalDocumentType} (confidence: ${finalConfidence})`);
+            console.log(`✅ Clean analysis completed: ${finalDocumentType} (confidence: ${finalConfidence})`);
             console.log(`🏷️ Tags: ${finalTags.join(', ')}`);
             console.log(`📝 Description: ${finalDescription}`);
           }
         } else {
-          throw new Error('Hybrid analysis failed');
+          throw new Error('Clean analysis failed');
         }
       } catch (error) {
-        console.log('⚠️ Hybrid analysis error, using fallback detection:', error);
+        console.log('⚠️ Clean analysis error, using fallback detection:', error);
         
         // Fallback to enhanced filename-based detection
         const fileName = file.name.toLowerCase();

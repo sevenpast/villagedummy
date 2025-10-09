@@ -6,7 +6,7 @@ type GeminiResp = { label: string; confidence: number; reasons?: string[] };
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const MODEL = "gemini-1.5-pro";
+const MODEL = "gemini-2.0-flash-exp";
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false },
@@ -26,6 +26,7 @@ const ID_WORDS = /(identity|ausweis|identité|carta d'identità)/i;
 const CONTRACT_WORDS = /(contract|vertrag|contrat|contratto)/i;
 const RESUME_WORDS = /(resume|cv|curriculum|lebenslauf)/i;
 const DIPLOMA_WORDS = /(diploma|zeugnis|zertifikat|certificate|schuldiplom|schulzeugnis)/i;
+const REGISTRATION_WORDS = /(anmeldung|registration|schule|kindergarten|school)/i;
 
 function heuristicLabel(ocr: string, mime: string, filename: string): { label: string; score: number; signal: string } {
   const txt = (ocr || "").toLowerCase();
@@ -41,7 +42,8 @@ function heuristicLabel(ocr: string, mime: string, filename: string): { label: s
   if (RECEIPT_WORDS.test(txt) || fname.includes("receipt")) return { label: "receipt", score: 0.8, signal: "receipt_word" };
   if (CONTRACT_WORDS.test(txt) || fname.includes("contract")) return { label: "contract", score: 0.8, signal: "contract_word" };
   if (RESUME_WORDS.test(txt) || fname.includes("cv") || fname.includes("resume")) return { label: "resume", score: 0.8, signal: "resume_word" };
-  if (DIPLOMA_WORDS.test(txt) || fname.includes("diplom") || fname.includes("zeugnis") || fname.includes("zertifikat")) return { label: "diploma", score: 0.9, signal: "diploma_word" };
+  if (DIPLOMA_WORDS.test(txt) || fname.includes("diplom") || fname.includes("zeugnis") || fname.includes("zertifikat") || fname.includes("schuldiplom") || fname.includes("schuldiplome")) return { label: "diploma", score: 0.9, signal: "diploma_word" };
+  if (REGISTRATION_WORDS.test(txt) || fname.includes("anmeldung") || fname.includes("schule") || fname.includes("kindergarten")) return { label: "registration", score: 0.8, signal: "registration_word" };
   if (IBAN_REGEX.test(txt)) return { label: "bank_statement", score: 0.75, signal: "iban" };
   
   // Low confidence fallbacks

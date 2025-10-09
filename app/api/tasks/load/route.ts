@@ -163,6 +163,66 @@ export async function GET(request: NextRequest) {
         priority: "low",
         category: "culture",
         icon: "BookOpen"
+      },
+      {
+        id: 13,
+        task_number: 13,
+        title: "Set up waste disposal and recycling",
+        description: "Register for waste collection services",
+        status: "not_started",
+        priority: "low",
+        category: "housing",
+        icon: "Trash2"
+      },
+      {
+        id: 14,
+        task_number: 14,
+        title: "Join local community groups",
+        description: "Connect with your local community",
+        status: "not_started",
+        priority: "low",
+        category: "social",
+        icon: "Users"
+      },
+      {
+        id: 15,
+        task_number: 15,
+        title: "Register for language courses",
+        description: "Improve your language skills for daily life",
+        status: "not_started",
+        priority: "medium",
+        category: "education",
+        icon: "MessageCircle"
+      },
+      {
+        id: 16,
+        task_number: 16,
+        title: "Understand Swiss voting system",
+        description: "Learn about democratic participation",
+        status: "not_started",
+        priority: "low",
+        category: "civic",
+        icon: "Vote"
+      },
+      {
+        id: 17,
+        task_number: 17,
+        title: "Find employment or transfer job",
+        description: "Secure your professional future",
+        status: "not_started",
+        priority: "high",
+        category: "employment",
+        icon: "Briefcase"
+      },
+      {
+        id: 18,
+        task_number: 18,
+        title: "Plan integration and long-term goals",
+        description: "Set your long-term objectives in Switzerland",
+        status: "not_started",
+        priority: "medium",
+        category: "planning",
+        icon: "Target"
       }
     ];
 
