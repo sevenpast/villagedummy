@@ -54,6 +54,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if email already exists in our users table
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('email')
+      .eq('email', email)
+      .single();
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'Email address is already in use' },
+        { status: 400 }
+      );
+    }
+
     console.log('🔧 Creating new user account:', { username, email, first_name, last_name });
 
     // Create user in Supabase Auth
@@ -64,10 +78,24 @@ export async function POST(request: NextRequest) {
 
     if (authError) {
       console.error('❌ Supabase auth error:', authError.message);
-      return NextResponse.json(
-        { error: 'Failed to create account. Email might already be in use.' },
-        { status: 400 }
-      );
+      
+      // Handle specific Supabase auth errors
+      if (authError.message.includes('already registered')) {
+        return NextResponse.json(
+          { error: 'Email address is already registered' },
+          { status: 400 }
+        );
+      } else if (authError.message.includes('invalid')) {
+        return NextResponse.json(
+          { error: 'Invalid email address format' },
+          { status: 400 }
+        );
+      } else {
+        return NextResponse.json(
+          { error: 'Failed to create account. Please try again.' },
+          { status: 400 }
+        );
+      }
     }
 
     if (!authData.user) {
@@ -103,26 +131,24 @@ export async function POST(request: NextRequest) {
         is_premium: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        last_login_at: null,
-        profile_completeness: {
-          basic_info: true,
-          country_info: !!country_of_origin,
-          family_info: true,
-          location_info: !!(municipality && canton && postal_code),
-          completeness_percentage: 100
-        }
+        last_login_at: null
       })
       .select()
       .single();
 
     if (profileError) {
       console.error('❌ Database profile creation error:', profileError.message);
+      console.error('❌ Profile error details:', profileError);
       
       // Clean up auth user if profile creation failed
-      await supabase.auth.admin.deleteUser(authData.user.id);
+      try {
+        await supabase.auth.admin.deleteUser(authData.user.id);
+      } catch (cleanupError) {
+        console.error('❌ Failed to cleanup auth user:', cleanupError);
+      }
       
       return NextResponse.json(
-        { error: 'Failed to create user profile' },
+        { error: 'Failed to create user profile. Please try again.' },
         { status: 500 }
       );
     }

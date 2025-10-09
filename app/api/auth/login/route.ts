@@ -31,10 +31,24 @@ export async function POST(request: NextRequest) {
 
     if (authError) {
       console.error('❌ Authentication error:', authError.message);
-      return NextResponse.json(
-        { error: 'Invalid username or password' },
-        { status: 401 }
-      );
+      
+      // Handle specific authentication errors
+      if (authError.message.includes('Invalid login credentials')) {
+        return NextResponse.json(
+          { error: 'Invalid username or password' },
+          { status: 401 }
+        );
+      } else if (authError.message.includes('Email not confirmed')) {
+        return NextResponse.json(
+          { error: 'Please check your email and confirm your account' },
+          { status: 401 }
+        );
+      } else {
+        return NextResponse.json(
+          { error: 'Authentication failed. Please try again.' },
+          { status: 401 }
+        );
+      }
     }
 
     if (!authData.user) {
