@@ -128,7 +128,7 @@ export default function SignUpPage() {
             Create your account
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Join the Village community
+            Join the ExpatVillage community
           </p>
         </div>
 
