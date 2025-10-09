@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { validateDemoCredentials, getDemoUser } from '@/lib/demo-storage'
 
 // Check if Supabase is properly configured
 console.log('🔧 Supabase configuration check:', {
@@ -37,21 +38,25 @@ export async function POST(request: NextRequest) {
     // SIMPLE DEMO AUTHENTICATION - Check username/password combination
     console.log('🔧 Demo mode: Authenticating user:', username)
     
-    // Simple demo credentials check (including newly created accounts)
-    const validCredentials = [
+    // Check predefined demo credentials first
+    const predefinedCredentials = [
       { username: 'admin', password: 'admin123' },
       { username: 'test', password: 'test123' },
       { username: 'user', password: 'user123' },
-      { username: 'demo', password: 'demo123' },
-      // Allow any username with password "password123" for demo purposes
-      { username: username, password: 'password123' }
+      { username: 'demo', password: 'demo123' }
     ]
     
-    const isValidCredential = validCredentials.some(
+    const isPredefinedCredential = predefinedCredentials.some(
       cred => cred.username === username && cred.password === password
     )
     
-    if (!isValidCredential) {
+    // Check demo storage for newly created accounts
+    const isDemoUserCredential = validateDemoCredentials(username, password)
+    
+    // For demo purposes, also allow any username with password "password123"
+    const isFallbackCredential = password === 'password123'
+    
+    if (!isPredefinedCredential && !isDemoUserCredential && !isFallbackCredential) {
       console.log('❌ Demo mode: Invalid credentials for:', username)
       return NextResponse.json(
         { error: 'Invalid username or password.' },
@@ -60,17 +65,37 @@ export async function POST(request: NextRequest) {
     }
     
     // Demo mode - simulate authentication for valid credentials
-    const demoUser = {
-      id: `user_${Date.now()}`,
-      auth_user_id: `auth_${Date.now()}`,
-      username: username,
-      email: username.includes('@') ? username : `${username}@demo.local`,
-      first_name: username.charAt(0).toUpperCase() + username.slice(1),
-      last_name: 'User',
-      country_of_origin: 'DE',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      last_login_at: new Date().toISOString(),
+    let demoUser
+    
+    if (isDemoUserCredential) {
+      // Use stored user data for newly created accounts
+      const storedUser = getDemoUser(username)
+      demoUser = storedUser?.userData || {
+        id: `user_${Date.now()}`,
+        auth_user_id: `auth_${Date.now()}`,
+        username: username,
+        email: username.includes('@') ? username : `${username}@demo.local`,
+        first_name: username.charAt(0).toUpperCase() + username.slice(1),
+        last_name: 'User',
+        country_of_origin: 'DE',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        last_login_at: new Date().toISOString(),
+      }
+    } else {
+      // Use default demo user for predefined credentials
+      demoUser = {
+        id: `user_${Date.now()}`,
+        auth_user_id: `auth_${Date.now()}`,
+        username: username,
+        email: username.includes('@') ? username : `${username}@demo.local`,
+        first_name: username.charAt(0).toUpperCase() + username.slice(1),
+        last_name: 'User',
+        country_of_origin: 'DE',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        last_login_at: new Date().toISOString(),
+      }
     }
 
     console.log('✅ Demo mode: Authentication successful for:', username)

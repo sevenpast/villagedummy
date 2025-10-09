@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { addDemoUser, getDemoUser } from '@/lib/demo-storage'
 
 // Demo version that simulates database storage
 // This will be replaced by real Supabase integration
@@ -16,6 +17,14 @@ export async function POST(request: NextRequest) {
     if (!username || !email || !password || !first_name) {
       return NextResponse.json(
         { error: 'Missing required fields: username, email, password, and name' },
+        { status: 400 }
+      )
+    }
+
+    // Check if username already exists
+    if (getDemoUser(username)) {
+      return NextResponse.json(
+        { error: 'Username already exists. Please choose a different username.' },
         { status: 400 }
       )
     }
@@ -55,8 +64,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // In a real app, this would be saved to database
-    console.log('DEMO: User would be saved to database:', user)
+    // Store user in demo storage
+    addDemoUser(username, password, user)
 
     return NextResponse.json({
       success: true,
