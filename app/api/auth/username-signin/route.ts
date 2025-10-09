@@ -56,7 +56,11 @@ export async function POST(request: NextRequest) {
     // For demo purposes, also allow any username with password "password123"
     const isFallbackCredential = password === 'password123'
     
-    if (!isPredefinedCredential && !isDemoUserCredential && !isFallbackCredential) {
+    // Additional fallback: allow any username with common demo passwords
+    const commonDemoPasswords = ['password123', 'demo123', 'test123', 'user123']
+    const isCommonDemoCredential = commonDemoPasswords.includes(password)
+    
+    if (!isPredefinedCredential && !isDemoUserCredential && !isFallbackCredential && !isCommonDemoCredential) {
       console.log('❌ Demo mode: Invalid credentials for:', username)
       return NextResponse.json(
         { error: 'Invalid username or password.' },
