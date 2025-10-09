@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, AlertCircle, Building, ArrowLeft } from 'lucide-react';
-import IntelligentPDFProcessor from '../../../components/IntelligentPDFProcessor';
+import SimplePDFUpload from '../../../components/SimplePDFUpload';
 
 export default function Task3Page() {
   const router = useRouter();
@@ -796,8 +796,8 @@ export default function Task3Page() {
                   </button>
                 </div>
 
-                {/* Intelligent PDF Processor */}
-                <IntelligentPDFProcessor 
+                {/* Simple PDF Upload */}
+                <SimplePDFUpload 
                   userData={user}
                   onFilledPDF={(pdfBlob) => {
                     console.log('PDF filled successfully:', pdfBlob);

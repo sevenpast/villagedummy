@@ -33,7 +33,7 @@ export default function IntelligentPDFProcessor({ userData, onFilledPDF, onCompl
       formData.append('file', file);
       formData.append('userData', JSON.stringify(userData));
 
-      const response = await fetch('/api/pdf/analyze-form', {
+      const response = await fetch('/api/pdf/simple-analyze', {
         method: 'POST',
         body: formData,
       });

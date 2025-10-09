@@ -3,7 +3,7 @@
 import { useState, useEffect, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, AlertCircle, GraduationCap, FileText, CheckSquare, Upload, Loader2, Download } from 'lucide-react';
-import IntelligentPDFProcessor from '../../../components/IntelligentPDFProcessor';
+import SimplePDFUpload from '../../../components/SimplePDFUpload';
 
 // All data now comes from real database - no mock data
 
@@ -584,8 +584,8 @@ export default function Task4Page() {
              </button>
            </div>
 
-                {/* Intelligent PDF Processor */}
-                <IntelligentPDFProcessor 
+                {/* Simple PDF Upload */}
+                <SimplePDFUpload 
                   userData={user}
                   onFilledPDF={(pdfBlob) => {
                     console.log('PDF filled successfully:', pdfBlob);
