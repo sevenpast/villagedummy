@@ -44,8 +44,9 @@ export default function SignInPage() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Store user data
+      // Store user data in localStorage for session management
       localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('session', JSON.stringify(data.session));
 
       // Redirect to dashboard
       window.location.href = '/dashboard';

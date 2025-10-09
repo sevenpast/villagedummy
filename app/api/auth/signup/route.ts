@@ -4,19 +4,24 @@ import { supabase } from '@/lib/supabase';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, email, password, first_name, last_name } = body;
+    const {
+      username, email, password, first_name, last_name,
+      country_of_origin, gender, nationality, birth_place,
+      german_skills, first_language, family_language,
+      has_kids, num_children, municipality, canton, postal_code
+    } = body;
 
-    // Simple validation
+    // Validate required fields
     if (!username || !email || !password || !first_name || !last_name) {
       return NextResponse.json(
-        { error: 'All fields are required' },
+        { error: 'Username, email, password, first name, and last name are required' },
         { status: 400 }
       );
     }
 
     if (password.length < 6) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters' },
+        { error: 'Password must be at least 6 characters long' },
         { status: 400 }
       );
     }
@@ -44,7 +49,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create user profile
+    // Create user profile with all fields
     const { data: userProfile, error: profileError } = await supabase
       .from('users')
       .insert({
@@ -53,8 +58,24 @@ export async function POST(request: NextRequest) {
         email,
         first_name,
         last_name,
+        country_of_origin: country_of_origin || null,
+        gender: gender || null,
+        nationality: nationality || null,
+        birth_place: birth_place || null,
+        german_skills: german_skills || null,
+        first_language: first_language || null,
+        family_language: family_language || null,
+        has_kids: has_kids || false,
+        num_children: has_kids ? (num_children || 0) : 0,
+        municipality: municipality || null,
+        canton: canton || null,
+        postal_code: postal_code || null,
+        onboarding_completed: false,
+        is_verified: false,
+        is_premium: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        last_login_at: null
       })
       .select()
       .single();
@@ -72,6 +93,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       user: userProfile,
+      session: authData.session,
     });
   } catch (error) {
     console.error('❌ Signup error:', error);

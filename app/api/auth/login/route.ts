@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       user: userProfile,
+      session: data.session,
     });
   } catch (error) {
     console.error('❌ Login error:', error);
