@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     // Validate password strength
     if (password.length < 6) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters long' },
+        { error: 'Password must be at least 6 characters long. Try: admin123, test123, user123, or demo123' },
         { status: 400 }
       )
     }
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     if (!isValidCredential) {
       console.log('❌ Demo mode: Invalid credentials for:', username)
       return NextResponse.json(
-        { error: 'Invalid username or password' },
+        { error: 'Invalid username or password. Valid combinations: admin/admin123, test/test123, user/user123, demo/demo123' },
         { status: 401 }
       )
     }
