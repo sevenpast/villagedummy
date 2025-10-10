@@ -11,12 +11,14 @@ export default function MyDataPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get user data from localStorage
-    const userData = localStorage.getItem('user');
+    // Get user data from localStorage - try multiple possible keys
+    let userData = localStorage.getItem('user') || localStorage.getItem('village_current_user');
+    
     if (userData) {
       try {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
+        console.log('✅ User data loaded for My Data page:', parsedUser);
       } catch (error) {
         console.error('Error parsing user data:', error);
         // Redirect to signin if user data is corrupted
@@ -24,6 +26,7 @@ export default function MyDataPage() {
         return;
       }
     } else {
+      console.log('❌ No user data found in localStorage');
       // No user data found, redirect to signin
       router.push('/signin');
       return;
