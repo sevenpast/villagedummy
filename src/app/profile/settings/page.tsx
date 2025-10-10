@@ -438,15 +438,22 @@ export default function ProfileSettingsPage() {
                   </div>
                 </div>
 
-                {/* My Data Button */}
-                <div className="border-t pt-6">
-                  <button
-                    type="button"
-                    onClick={() => router.push('/my-data')}
-                    className="w-full flex justify-center py-2 px-4 border border-blue-300 rounded-md shadow-sm text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-4"
-                  >
-                    View My Data (DSGVO)
-                  </button>
+                {/* My Data Button - Prominent at top */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <div className="text-center">
+                    <h3 className="text-lg font-medium text-blue-900 mb-2">Data Privacy & Access</h3>
+                    <p className="text-sm text-blue-700 mb-4">View all your personal data stored in our system</p>
+                    <button
+                      type="button"
+                      onClick={() => router.push('/my-data')}
+                      className="inline-flex items-center px-6 py-3 border border-blue-300 rounded-md shadow-sm text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      View My Data (DSGVO)
+                    </button>
+                  </div>
                 </div>
 
                 {/* Submit Button */}
