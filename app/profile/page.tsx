@@ -107,6 +107,8 @@ export default function ProfilePage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showDataModal, setShowDataModal] = useState(false);
+  const [showUserData, setShowUserData] = useState(false);
 
   useEffect(() => {
     // Get current user from localStorage
@@ -559,22 +561,15 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* My Data Button - Prominent section */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                  <div className="text-center">
-                    <h3 className="text-lg font-medium text-blue-900 mb-2">Data Privacy & Access</h3>
-                    <p className="text-sm text-blue-700 mb-4">View all your personal data stored in our system</p>
-                    <button
-                      type="button"
-                      onClick={() => router.push('/my-data')}
-                      className="inline-flex items-center px-6 py-3 border border-blue-300 rounded-md shadow-sm text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      View My Data (DSGVO)
-                    </button>
-                  </div>
+                {/* My Data Button - Simple gray button */}
+                <div className="border-t pt-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowDataModal(true)}
+                    className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 mb-4"
+                  >
+                    My Data (DSGVO)
+                  </button>
                 </div>
 
                 {/* Submit Button */}
@@ -629,6 +624,93 @@ export default function ProfilePage() {
           </div>
         </div>
       </main>
+
+      {/* My Data Modal */}
+      {showDataModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">My Data (DSGVO)</h3>
+                <button
+                  onClick={() => {
+                    setShowDataModal(false);
+                    setShowUserData(false);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {!showUserData ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-600 mb-6">Click the button below to view your personal data</p>
+                  <button
+                    onClick={() => setShowUserData(true)}
+                    className="px-6 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  >
+                    View My Data
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-gray-50 p-4 rounded-md">
+                    <h4 className="font-medium text-gray-900 mb-2">Personal Information</h4>
+                    <div className="space-y-2 text-sm">
+                      <div><span className="font-medium">Name:</span> {currentUser?.first_name || 'Not provided'}</div>
+                      <div><span className="font-medium">Gender:</span> {currentUser?.gender || 'Not provided'}</div>
+                      <div><span className="font-medium">Country of Origin:</span> {currentUser?.country_of_origin || 'Not provided'}</div>
+                      <div><span className="font-medium">Nationality:</span> {currentUser?.nationality || 'Not provided'}</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-md">
+                    <h4 className="font-medium text-gray-900 mb-2">Location Information</h4>
+                    <div className="space-y-2 text-sm">
+                      <div><span className="font-medium">Target Canton:</span> {currentUser?.target_canton || 'Not provided'}</div>
+                      <div><span className="font-medium">Target Municipality:</span> {currentUser?.target_municipality || 'Not provided'}</div>
+                      <div><span className="font-medium">Postal Code:</span> {currentUser?.target_postal_code || 'Not provided'}</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-md">
+                    <h4 className="font-medium text-gray-900 mb-2">Language & Family</h4>
+                    <div className="space-y-2 text-sm">
+                      <div><span className="font-medium">German Skills:</span> {currentUser?.german_skills || 'Not provided'}</div>
+                      <div><span className="font-medium">First Language:</span> {currentUser?.first_language || 'Not provided'}</div>
+                      <div><span className="font-medium">Has Children:</span> {currentUser?.has_children ? 'Yes' : 'No'}</div>
+                      {currentUser?.has_children && (
+                        <div><span className="font-medium">Number of Children:</span> {currentUser?.children_count || 'Not specified'}</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button
+                      onClick={() => setShowUserData(false)}
+                      className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowDataModal(false);
+                        setShowUserData(false);
+                      }}
+                      className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
