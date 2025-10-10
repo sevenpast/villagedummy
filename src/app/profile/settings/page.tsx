@@ -264,7 +264,13 @@ export default function ProfileSettingsPage() {
             <div>
               <p className="text-sm font-medium text-gray-900">Profile Settings</p>
             </div>
-            <div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => router.push('/my-data')}
+                className="bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
+              >
+                Meine Daten
+              </button>
               <button
                 onClick={handleBackClick}
                 className="bg-gray-200 text-gray-800 px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-300"
