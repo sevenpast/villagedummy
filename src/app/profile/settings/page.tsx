@@ -264,13 +264,7 @@ export default function ProfileSettingsPage() {
             <div>
               <p className="text-sm font-medium text-gray-900">Profile Settings</p>
             </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => router.push('/my-data')}
-                className="bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
-              >
-                Meine Daten
-              </button>
+            <div>
               <button
                 onClick={handleBackClick}
                 className="bg-gray-200 text-gray-800 px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-300"
@@ -442,6 +436,17 @@ export default function ProfileSettingsPage() {
                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500"
                     />
                   </div>
+                </div>
+
+                {/* My Data Button */}
+                <div className="border-t pt-6">
+                  <button
+                    type="button"
+                    onClick={() => router.push('/my-data')}
+                    className="w-full flex justify-center py-2 px-4 border border-blue-300 rounded-md shadow-sm text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-4"
+                  >
+                    View My Data (DSGVO)
+                  </button>
                 </div>
 
                 {/* Submit Button */}

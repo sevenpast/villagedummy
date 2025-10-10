@@ -445,12 +445,6 @@ export default function DashboardPage() {
                 Document Vault
               </button>
               <button
-                onClick={() => router.push('/my-data')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm"
-              >
-                Meine Daten
-              </button>
-              <button
                 onClick={() => {
                   setProfileFormData({
                     first_name: user.first_name || '',

@@ -14,13 +14,24 @@ export default function MyDataPage() {
     // Get user data from localStorage
     const userData = localStorage.getItem('user');
     if (userData) {
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        // Redirect to signin if user data is corrupted
+        router.push('/signin');
+        return;
+      }
+    } else {
+      // No user data found, redirect to signin
+      router.push('/signin');
+      return;
     }
 
     // Load user documents
     loadDocuments();
-  }, []);
+  }, [router]);
 
   const loadDocuments = async () => {
     try {
