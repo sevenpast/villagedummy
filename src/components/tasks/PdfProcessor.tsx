@@ -44,7 +44,6 @@ export default function PdfProcessor({
           📄 PDF Form Processing
         </h3>
         <p className="text-sm text-blue-800">
-          Upload your Swiss municipality registration form and we'll automatically fill it with your profile data using AI-powered OCR technology.
         </p>
       </div>
 

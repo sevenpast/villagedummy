@@ -532,7 +532,6 @@ Best regards,
                       📄 PDF Form Processing
                     </h3>
                     <p className="text-sm text-gray-700 mb-4">
-                      Upload your Swiss municipality registration form and we'll automatically fill it with your profile data using AI-powered OCR technology.
                     </p>
                     
                     {/* Upload Button that shows error message */}
