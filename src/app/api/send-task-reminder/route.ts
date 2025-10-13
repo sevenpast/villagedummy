@@ -20,18 +20,24 @@ export async function POST(request: NextRequest) {
         }, { status: 500 })
       }
 
+      // For development: always send to verified email address
+      // In production, you would verify your domain and use userEmail
+      const recipientEmail = process.env.NODE_ENV === 'production' ? userEmail : 'hublaizel@icloud.com'
+      
       const emailData = {
         from: 'Village App <noreply@resend.dev>',
-        to: [userEmail],
+        to: [recipientEmail],
         subject: `🔔 Reminder: ${taskTitle}`,
         html: `
           <h1>🔔 Task Reminder</h1>
           <p>This is a reminder about your task:</p>
           <h2>${taskTitle}</h2>
+          <p><strong>Requested by:</strong> ${userEmail}</p>
           <p>Don't forget to complete this important step in your Swiss expat journey!</p>
           <p><em>This reminder was sent immediately as requested.</em></p>
           <hr>
           <p><small>Village App - Your Swiss Expat Journey Companion</small></p>
+          <p><small>Note: In development mode, emails are sent to the verified address for testing.</small></p>
         `
       }
 
@@ -51,12 +57,16 @@ export async function POST(request: NextRequest) {
           
           return NextResponse.json({
             success: true,
-            message: '📧 Reminder email sent successfully!',
+            message: process.env.NODE_ENV === 'production' 
+              ? '📧 Reminder email sent successfully!'
+              : '📧 Reminder email sent successfully! (Sent to verified address for testing)',
             data: {
               task_id: taskId,
-              sent_to: userEmail,
+              requested_by: userEmail,
+              sent_to: recipientEmail,
               task_title: taskTitle,
-              email_id: emailResult.id
+              email_id: emailResult.id,
+              development_mode: process.env.NODE_ENV !== 'production'
             }
           })
         } else {
