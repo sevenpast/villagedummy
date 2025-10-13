@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    // Test E-Mail an deine Adresse
+    const body = await request.json()
+    const { customEmail, customSubject, customHtml } = body
+
+    // Use custom email data if provided, otherwise use default test email
     const emailData = {
       from: 'Village App <noreply@resend.dev>',
-      to: ['hublaizel@icloud.com'],
-      subject: '🚀 E-Mail-Test von Village App',
-      html: `
+      to: customEmail ? [customEmail] : ['hublaizel@icloud.com'],
+      subject: customSubject || '🚀 E-Mail-Test von Village App',
+      html: customHtml || `
         <h1>🎉 E-Mail funktioniert wieder!</h1>
         <p>Diese E-Mail wurde über die <strong>direkte Resend API</strong> versendet!</p>
         <p><strong>Empfänger:</strong> hublaizel@icloud.com</p>
