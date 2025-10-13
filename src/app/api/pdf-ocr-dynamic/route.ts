@@ -355,10 +355,10 @@ Return as JSON with this exact structure:
         'Ensure date format is DD.MM.YYYY'
       ],
       swiss_validation: {
-        postal_code_valid: /^\d{4}$/.test(extractedData.postalCode || ''),
-        canton_valid: /^[A-Z]{2}$/.test(extractedData.canton || ''),
-        date_format_valid: /^\d{2}\.\d{2}\.\d{4}$/.test(extractedData.dateOfBirth || ''),
-        permit_type_valid: ['B', 'L', 'C', 'G'].includes(extractedData.residencePermit || '')
+        postal_code_valid: /^\d{4}$/.test((extractedData as any).postalCode || ''),
+        canton_valid: /^[A-Z]{2}$/.test((extractedData as any).canton || ''),
+        date_format_valid: /^\d{2}\.\d{2}\.\d{4}$/.test((extractedData as any).dateOfBirth || ''),
+        permit_type_valid: ['B', 'L', 'C', 'G'].includes((extractedData as any).residencePermit || '')
       },
       missing_fields: Object.keys(extractedData).filter(key => !extractedData[key]),
       processing_method: process.env.GOOGLE_APPLICATION_CREDENTIALS ? 'Google Cloud Vision API' : 'Enhanced Mock OCR',
