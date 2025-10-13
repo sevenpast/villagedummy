@@ -212,15 +212,17 @@ export function formatValidationError(error: any): CustomError {
 
 // Database error formatter
 export function formatDatabaseError(error: any): CustomError {
-  if (error.code === '23505') { // Unique constraint violation
+  const { DB_ERROR_CODES } = require('@/lib/constants');
+  
+  if (error.code === DB_ERROR_CODES.UNIQUE_VIOLATION) {
     return createError.validation('Record already exists', { constraint: error.constraint });
   }
   
-  if (error.code === '23503') { // Foreign key constraint violation
+  if (error.code === DB_ERROR_CODES.FOREIGN_KEY_VIOLATION) {
     return createError.validation('Referenced record not found', { constraint: error.constraint });
   }
   
-  if (error.code === '23502') { // Not null constraint violation
+  if (error.code === DB_ERROR_CODES.NOT_NULL_VIOLATION) {
     return createError.validation('Required field is missing', { column: error.column });
   }
   

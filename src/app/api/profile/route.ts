@@ -1,6 +1,6 @@
 // ============================================================================
-// PROFILE API - SECURED VERSION
-// Fixed IDOR vulnerability by using authenticated user context
+// PROFILE API - SIMPLIFIED & SECURED VERSION
+// Optimized with upsert() and simplified logic
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -12,10 +12,9 @@ import { createClient } from '@/lib/supabase/server'
 const profileHandler = async (request: AuthenticatedRequest): Promise<NextResponse> => {
   const user = request.user
   const userId = user.id
-
-  // SECURITY FIX: Use authenticated user ID instead of client-provided ID
   const supabase = await createClient()
   
+  // SIMPLIFIED: Use .single() for cleaner code
   const { data, error } = await supabase
     .from('user_profiles')
     .select('*')
@@ -32,49 +31,18 @@ const profileHandler = async (request: AuthenticatedRequest): Promise<NextRespon
   })
 }
 
-const createProfileHandler = async (request: AuthenticatedRequest): Promise<NextResponse> => {
+const upsertProfileHandler = async (request: AuthenticatedRequest): Promise<NextResponse> => {
   const user = request.user
   const userId = user.id
   const body = await request.json()
   const profileData = validateRequestBody(ProfileUpdateSchema, body)
-
-  // SECURITY FIX: Use authenticated user ID
   const supabase = await createClient()
   
-  const { data, error } = await supabase
-    .from('user_profiles')
-    .insert({
-      user_id: userId, // SECURE: Use authenticated user ID
-      ...profileData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    })
-    .select()
-    .single()
-
-  if (error) {
-    throw createError.database('Failed to create profile', error)
-  }
-
-  return NextResponse.json({ 
-    success: true,
-    data 
-  })
-}
-
-const updateProfileHandler = async (request: AuthenticatedRequest): Promise<NextResponse> => {
-  const user = request.user
-  const userId = user.id
-  const body = await request.json()
-  const profileData = validateRequestBody(ProfileUpdateSchema, body)
-
-  // SECURITY FIX: Use authenticated user ID and upsert for simplicity
-  const supabase = await createClient()
-  
+  // SIMPLIFIED: Single upsert operation handles both create and update
   const { data, error } = await supabase
     .from('user_profiles')
     .upsert({
-      user_id: userId, // SECURE: Use authenticated user ID
+      user_id: userId,
       ...profileData,
       updated_at: new Date().toISOString()
     }, { 
@@ -84,7 +52,7 @@ const updateProfileHandler = async (request: AuthenticatedRequest): Promise<Next
     .single()
 
   if (error) {
-    throw createError.database('Failed to update profile', error)
+    throw createError.database('Failed to save profile', error)
   }
 
   return NextResponse.json({ 
@@ -93,7 +61,7 @@ const updateProfileHandler = async (request: AuthenticatedRequest): Promise<Next
   })
 }
 
-// SECURITY FIX: All routes now require authentication
+// SIMPLIFIED: Only two endpoints needed - GET and UPSERT
 export const GET = withAuth(withErrorHandling(profileHandler))
-export const POST = withAuth(withErrorHandling(createProfileHandler))
-export const PUT = withAuth(withErrorHandling(updateProfileHandler))
+export const POST = withAuth(withErrorHandling(upsertProfileHandler))
+export const PUT = withAuth(withErrorHandling(upsertProfileHandler))

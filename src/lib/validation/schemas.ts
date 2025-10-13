@@ -4,11 +4,14 @@
 // ============================================================================
 
 import { z } from 'zod';
+import { VALIDATION_PATTERNS, VALID_DELETION_TYPES, VALID_EXPORT_FORMATS, VALID_TASK_ACTIONS } from '@/lib/constants';
 
 // Common validation patterns
-export const uuidSchema = z.string().uuid('Invalid UUID format');
-export const emailSchema = z.string().email('Invalid email format');
+export const uuidSchema = z.string().regex(VALIDATION_PATTERNS.UUID, 'Invalid UUID format');
+export const emailSchema = z.string().regex(VALIDATION_PATTERNS.EMAIL, 'Invalid email format');
 export const urlSchema = z.string().url('Invalid URL format');
+export const swissPostalCodeSchema = z.string().regex(VALIDATION_PATTERNS.SWISS_POSTAL_CODE, 'Invalid Swiss postal code');
+export const phoneSchema = z.string().regex(VALIDATION_PATTERNS.PHONE, 'Invalid Swiss phone number');
 
 // Document-related schemas
 export const DocumentDownloadSchema = z.object({
@@ -27,19 +30,19 @@ export const ProfileUpdateSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(100),
   lastName: z.string().min(1, 'Last name is required').max(100),
   email: emailSchema,
-  phone: z.string().optional(),
+  phone: phoneSchema.optional(),
   countryOfOrigin: z.string().optional(),
   lastResidenceCountry: z.string().optional(),
   hasChildren: z.boolean().optional(),
   municipality: z.string().optional(),
   canton: z.string().optional(),
-  postalCode: z.string().optional()
+  postalCode: swissPostalCodeSchema.optional()
 });
 
 // Task-related schemas
 export const TaskActionSchema = z.object({
   taskId: uuidSchema,
-  action: z.enum(['mark_done', 'set_reminder', 'open_modal']),
+  action: z.enum(VALID_TASK_ACTIONS),
   reminderTime: z.string().optional()
 });
 
@@ -65,12 +68,13 @@ export const SchoolEmailSchema = z.object({
 
 // GDPR schemas
 export const GDPRExportSchema = z.object({
-  format: z.enum(['json', 'readable', 'simple']).optional().default('readable')
+  format: z.enum(VALID_EXPORT_FORMATS).optional().default('readable')
 });
 
 export const GDPRDeleteSchema = z.object({
   confirmation: z.literal('DELETE_MY_ACCOUNT'),
-  verificationToken: z.string().optional()
+  verificationToken: z.string().optional(),
+  deletion_type: z.enum(VALID_DELETION_TYPES).optional().default('full_deletion')
 });
 
 // Validation helper functions

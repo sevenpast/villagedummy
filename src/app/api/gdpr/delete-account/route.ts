@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { randomBytes } from 'crypto';
+import { VALID_DELETION_TYPES, API_MESSAGES } from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,16 +10,16 @@ export async function POST(request: NextRequest) {
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: API_MESSAGES.ERROR.UNAUTHORIZED }, { status: 401 });
     }
 
     const { deletion_reason, deletion_type = 'full_deletion' } = await request.json();
 
-    // Validate deletion type
-    if (!['full_deletion', 'anonymization'].includes(deletion_type)) {
+    // SIMPLIFIED: Use constants for validation
+    if (!VALID_DELETION_TYPES.includes(deletion_type as any)) {
       return NextResponse.json({ 
         error: 'Invalid deletion type',
-        valid_types: ['full_deletion', 'anonymization']
+        valid_types: VALID_DELETION_TYPES
       }, { status: 400 });
     }
 
