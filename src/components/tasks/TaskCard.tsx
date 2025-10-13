@@ -66,7 +66,7 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
   const [hasChildren, setHasChildren] = useState<boolean>(false)
   const [municipalityWebsite, setMunicipalityWebsite] = useState<string | null>(null)
   const [isLoadingWebsite, setIsLoadingWebsite] = useState(false)
-  const [schoolWebsite, setSchoolWebsite] = useState<string | null>(null)
+  const [schoolWebsite, setSchoolWebsite] = useState<any>(null)
   const [isLoadingSchoolWebsite, setIsLoadingSchoolWebsite] = useState(false)
   const [schoolEmailData, setSchoolEmailData] = useState<any>(null)
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false)
