@@ -33,7 +33,6 @@ export function ProfileForm({ user }: ProfileFormProps) {
     
     // Public info (shown to other users)
     homeAddress: '',
-    workAddress: '',
     postalCode: '',
     municipality: '',
     canton: '',
@@ -81,7 +80,6 @@ export function ProfileForm({ user }: ProfileFormProps) {
             dateOfBirth: data.date_of_birth || '',
             livingWith: data.living_with || '',
             homeAddress: data.home_address || '',
-            workAddress: data.work_address || '',
             postalCode: data.postal_code || '',
             municipality: data.municipality || '',
             canton: data.canton || '',
@@ -153,7 +151,6 @@ export function ProfileForm({ user }: ProfileFormProps) {
       if (formData.dateOfBirth) profileData.date_of_birth = formData.dateOfBirth
       if (formData.livingWith) profileData.living_with = formData.livingWith
       if (formData.homeAddress) profileData.home_address = formData.homeAddress
-      if (formData.workAddress) profileData.work_address = formData.workAddress
       if (formData.postalCode) profileData.postal_code = formData.postalCode
       if (formData.municipality) profileData.municipality = formData.municipality
       if (formData.canton) profileData.canton = formData.canton
@@ -698,20 +695,6 @@ export function ProfileForm({ user }: ProfileFormProps) {
                     />
                   </div>
 
-                  <div>
-                    <label htmlFor="workAddress" className="block text-sm font-medium text-gray-700 mb-1">
-                      Work Address
-                    </label>
-                    <input
-                      id="workAddress"
-                      name="workAddress"
-                      type="text"
-                      value={formData.workAddress}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                      placeholder="searchable & auto-complete"
-                    />
-                  </div>
 
                   <div>
                     <label htmlFor="hasChildren" className="block text-sm font-medium text-gray-700 mb-1">
