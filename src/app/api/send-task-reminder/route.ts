@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Skip authorization check for now - we'll use the userEmail from request body
     // In a real app, you'd validate the JWT token here

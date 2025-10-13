@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     console.log('🔄 Starting daily reminder email process...')
 
     // Initialize Supabase client with service role
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Call the Edge Function
     const { data, error } = await supabase.functions.invoke('send-reminder-emails', {

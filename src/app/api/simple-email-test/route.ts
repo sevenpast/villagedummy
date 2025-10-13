@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 export async function POST(request: NextRequest) {
   try {
     // Einfacher Supabase Client ohne User-Check
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Teste die E-Mail-Funktionen direkt
     const { data: testResult, error: testError } = await supabase
