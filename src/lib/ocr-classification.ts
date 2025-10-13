@@ -5,8 +5,8 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Gemini configuration
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY!);
+// Gemini configuration - SECURITY FIX: Use server-side only API key
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
 export interface OCRResult {

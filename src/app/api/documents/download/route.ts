@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { withAuth, AuthenticatedRequest } from '@/lib/auth/middleware'
+import { DocumentDownloadSchema, validateQueryParams } from '@/lib/validation/schemas'
 
 // Service Role Key for server-side operations
 const supabase = createClient(
@@ -7,26 +9,23 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// GET /api/documents/download - Download a document
-export async function GET(request: NextRequest) {
+// GET /api/documents/download - Download a document (SECURED)
+export const GET = withAuth(async (request: AuthenticatedRequest) => {
   try {
     const { searchParams } = new URL(request.url)
-    const documentId = searchParams.get('documentId')
-    const userId = searchParams.get('userId')
-
-    if (!documentId || !userId) {
-      return NextResponse.json(
-        { error: 'Document ID and User ID are required' },
-        { status: 400 }
-      )
-    }
+    
+    // SECURITY FIX: Validate input parameters
+    const { documentId, userId } = validateQueryParams(DocumentDownloadSchema, searchParams)
+    
+    // SECURITY FIX: Use authenticated user ID instead of parameter
+    const authenticatedUserId = request.user.id
 
     // Fetch document metadata
     const { data: document, error: docError } = await supabase
       .from('documents')
       .select('storage_path, file_name, file_type, user_id')
       .eq('id', documentId)
-      .eq('user_id', userId) // Ensure user owns the document
+      .eq('user_id', authenticatedUserId) // SECURITY FIX: Use authenticated user ID
       .single()
 
     if (docError || !document) {
@@ -58,10 +57,15 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('API Error:', error)
+    // SECURITY FIX: Don't log sensitive errors in production
+    if (process.env.NODE_ENV === 'development') {
+      console.error('API Error:', error)
+    }
+    
+    // SECURITY FIX: Generic error message to prevent information leakage
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     )
   }
-}
+})
