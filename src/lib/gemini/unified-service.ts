@@ -5,6 +5,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@/lib/supabase/server';
+import { env } from '@/lib/env';
 
 interface CacheEntry {
   id: string;
@@ -14,21 +15,47 @@ interface CacheEntry {
   expires_at: string;
 }
 
+interface MunicipalityInfo {
+  website_url?: string;
+  official_name?: string;
+  official_language?: string;
+  email?: string;
+}
+
+interface SchoolAuthorityInfo {
+  website_url?: string;
+  email?: string;
+  official_language?: string;
+  authority_name?: string;
+}
+
+interface EmailContent {
+  subject: string;
+  body_original: string;
+  body_english: string;
+}
+
+interface DocumentAnalysis {
+  [key: string]: string | number | boolean;
+}
+
+type GeminiData = MunicipalityInfo | SchoolAuthorityInfo | EmailContent | DocumentAnalysis | { content: string };
+
 interface GeminiResponse {
   success: boolean;
-  data?: any;
+  data?: GeminiData;
   error?: string;
   fromCache?: boolean;
 }
 
 export class GeminiService {
   private client: GoogleGenerativeAI;
-  private model: any;
-  private supabase: any;
+  private model: ReturnType<GoogleGenerativeAI['getGenerativeModel']>;
+  private supabase: ReturnType<typeof createClient> | null;
 
   constructor() {
-    // SECURITY: Use server-side only API key
-    this.client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+    // SECURITY: Use server-side only API key with type safety
+    this.client = new GoogleGenerativeAI(env.geminiApiKey());
     this.model = this.client.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
     this.supabase = null; // Initialize lazily
   }
