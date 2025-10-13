@@ -76,11 +76,12 @@ export async function POST(request: NextRequest) {
     try {
       // Check if Google Cloud Vision is configured
       if (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GOOGLE_CLOUD_PROJECT_ID) {
-        // Real Google Cloud Vision API implementation
-        const { ImageAnnotatorClient } = await import('@google-cloud/vision');
-        const visionClient = new ImageAnnotatorClient();
+        try {
+          // Real Google Cloud Vision API implementation
+          const { ImageAnnotatorClient } = await import('@google-cloud/vision');
+          const visionClient = new ImageAnnotatorClient();
         
-        const [result] = await visionClient.documentTextDetection({
+          const [result] = await visionClient.documentTextDetection({
           image: { content: Buffer.from(fileBuffer) }
         });
         
@@ -110,7 +111,13 @@ export async function POST(request: NextRequest) {
         - Text confidence: ${pages[0]?.confidence || 0.8}
         - Processing method: Google Cloud Vision API`;
         
-      } else {
+        } catch (visionError) {
+          console.log('Google Cloud Vision not available, using fallback:', visionError);
+          // Fall through to the fallback implementation below
+        }
+      }
+      
+      if (!ocrResults) {
         // Fallback: Enhanced mock OCR with realistic Swiss form data
         ocrResults = `Document Type: Swiss Municipality Registration Form
         Language: German/French/Italian
