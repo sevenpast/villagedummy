@@ -361,11 +361,6 @@ export function ProfileForm({ user }: ProfileFormProps) {
 
               {/* Private Info Section */}
               <div className="space-y-6">
-                <div className="bg-green-100 p-3 rounded-lg">
-                  <p className="text-sm text-green-800">
-                    This info is NOT shown to other users. It's used to enhance your experience on Village
-                  </p>
-                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -637,11 +632,6 @@ export function ProfileForm({ user }: ProfileFormProps) {
 
               {/* Public Info Section */}
               <div className="space-y-6">
-                <div className="bg-orange-100 p-3 rounded-lg">
-                  <p className="text-sm text-orange-800">
-                    This info is shown to other users. It helps you find your people
-                  </p>
-                </div>
 
                 <div className="space-y-4">
                   <div>
@@ -706,14 +696,11 @@ export function ProfileForm({ user }: ProfileFormProps) {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                       placeholder="Street address (optional)"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      → On the map, we position your pin(s) around 100m away to keep your exact location private
-                    </p>
                   </div>
 
                   <div>
                     <label htmlFor="workAddress" className="block text-sm font-medium text-gray-700 mb-1">
-                      Add your work address to find events & people nearby
+                      Work Address
                     </label>
                     <input
                       id="workAddress"
