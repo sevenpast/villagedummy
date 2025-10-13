@@ -351,6 +351,11 @@ Best regards,
 
     setIsLoadingWebsite(true)
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('User not authenticated')
+      }
+
       const response = await fetch('/api/municipality-website', {
         method: 'POST',
         headers: {
@@ -358,7 +363,8 @@ Best regards,
         },
         body: JSON.stringify({
           municipality: userMunicipality,
-          canton: userCanton
+          canton: userCanton,
+          userId: user.id
         }),
       })
 
@@ -368,7 +374,17 @@ Best regards,
         throw new Error(result.error || 'Failed to find municipality website')
       }
 
-      setMunicipalityWebsite(result.website_url)
+      if (result.success && result.website_url) {
+        setMunicipalityWebsite(result.website_url)
+        if (result.from_cache) {
+          console.log('Municipality website loaded from cache')
+        }
+        if (result.fallback) {
+          console.warn('Using fallback municipality website')
+        }
+      } else {
+        throw new Error(result.error || 'No website found')
+      }
     } catch (error) {
       console.error('Error loading municipality website:', error)
       alert(`Error: ${error instanceof Error ? error.message : 'Failed to find municipality website'}`)
@@ -410,11 +426,26 @@ Best regards,
         throw new Error(result.error || 'Failed to generate school email')
       }
 
-      setSchoolEmailData(result)
-      
-      // Open the mailto link
-      if (result.mailto_url) {
-        window.open(result.mailto_url)
+      if (result.success) {
+        setSchoolEmailData(result)
+        
+        // Generate mailto link with multilingual content
+        const subject = encodeURIComponent(result.email_subject || 'School Registration Inquiry')
+        const body = encodeURIComponent(result.email_body || '')
+        const cc = result.user_email ? `&cc=${encodeURIComponent(result.user_email)}` : ''
+        const mailtoUrl = `mailto:${result.school_authority_email}?subject=${subject}&body=${body}${cc}`
+        
+        // Open the mailto link
+        window.open(mailtoUrl)
+        
+        if (result.from_cache) {
+          console.log('School email data loaded from cache')
+        }
+        if (result.fallback) {
+          console.warn('Using fallback school email data')
+        }
+      } else {
+        throw new Error(result.error || 'Failed to generate school email')
       }
     } catch (error) {
       console.error('Error generating school email:', error)
@@ -456,7 +487,17 @@ Best regards,
         throw new Error(result.error || 'Failed to find school website')
       }
 
-      setSchoolWebsite(result.school_website_url)
+      if (result.success && result.school_website_url) {
+        setSchoolWebsite(result.school_website_url)
+        if (result.from_cache) {
+          console.log('School website loaded from cache')
+        }
+        if (result.fallback) {
+          console.warn('Using fallback school website')
+        }
+      } else {
+        throw new Error(result.error || 'No school website found')
+      }
     } catch (error) {
       console.error('Error loading school website:', error)
       alert(`Error: ${error instanceof Error ? error.message : 'Failed to load school website'}`)

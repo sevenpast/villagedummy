@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@/lib/supabase/server';
+import { 
+  generateCacheKey, 
+  validateAndCleanUrl, 
+  validateLocationData, 
+  getCachedResult, 
+  setCachedResult,
+  getOfficialLanguage 
+} from '@/lib/gemini-cache-utils';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -29,32 +37,66 @@ export async function POST(request: NextRequest) {
     const userMunicipality = municipality || userProfile?.municipality;
     const userCanton = canton || userProfile?.canton;
 
-    if (!userMunicipality || !userCanton) {
+    // Validate location data
+    const validation = validateLocationData(userMunicipality, userCanton);
+    if (!validation.isValid) {
       return NextResponse.json({ 
-        error: 'Municipality and canton information required',
-        message: 'Please complete your profile with location information to find school registration details.'
+        error: validation.error,
+        code: 'INVALID_LOCATION_DATA'
       }, { status: 400 });
+    }
+
+    const cleanMunicipality = validation.municipality!;
+    const cleanCanton = validation.canton!;
+
+    // Check cache first
+    const cacheKey = generateCacheKey('school_website', cleanMunicipality, cleanCanton);
+    const cachedResult = await getCachedResult(cacheKey, userId);
+    
+    if (cachedResult.success && cachedResult.fromCache) {
+      return NextResponse.json({
+        success: true,
+        school_website_url: cachedResult.data.school_website_url,
+        school_authority_name: cachedResult.data.school_authority_name,
+        school_authority_email: cachedResult.data.school_authority_email,
+        official_language: cachedResult.data.official_language,
+        contact_phone: cachedResult.data.contact_phone,
+        address: cachedResult.data.address,
+        from_cache: true,
+        cached_at: cachedResult.data.cached_at
+      });
     }
 
     // Check if API key is configured
     if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your_gemini_api_key_here') {
+      const officialLanguage = getOfficialLanguage(cleanCanton);
+      const demoData = {
+        school_website_url: `https://www.schule-${cleanMunicipality.toLowerCase().replace(/\s+/g, '')}.ch`,
+        school_authority_name: `Schulamt ${cleanMunicipality}`,
+        school_authority_email: `schulamt@${cleanMunicipality.toLowerCase().replace(/\s+/g, '')}.ch`,
+        official_language: officialLanguage,
+        contact_phone: '+41 XX XXX XX XX',
+        address: `${cleanMunicipality}, ${cleanCanton}`,
+        cached_at: new Date().toISOString()
+      };
+      
+      // Cache the demo result
+      await setCachedResult(cacheKey, 'school_website', cleanMunicipality, cleanCanton, demoData, userId);
+      
       return NextResponse.json({ 
-        error: 'Gemini API key not configured',
-        demo_response: {
-          school_website_url: 'https://www.schule-zuerich.ch',
-          school_authority_name: 'Schulamt Zürich',
-          school_authority_email: 'schulamt@stadt-zuerich.ch',
-          official_language: 'Deutsch',
-          message: 'This is a demo response. Please configure your Gemini API key for real results.'
-        }
-      }, { status: 200 });
+        success: true,
+        ...demoData,
+        demo_response: true,
+        message: 'This is a demo response. Please configure your Gemini API key for real results.'
+      });
     }
 
     try {
       const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const officialLanguage = getOfficialLanguage(cleanCanton);
       
       // Find school registration website
-      const websitePrompt = `Finde die offizielle Webseite für die Schulanmeldung der Gemeinde ${userMunicipality} im Kanton ${userCanton} in der Schweiz. 
+      const websitePrompt = `Finde die offizielle Webseite für die Schulanmeldung der Gemeinde ${cleanMunicipality} im Kanton ${cleanCanton} in der Schweiz. 
 
 Gib nur die URL zurück, keine zusätzlichen Erklärungen. Falls keine spezifische Webseite gefunden wird, gib die URL der kantonalen Schulbehörde zurück.
 
@@ -64,8 +106,11 @@ Beispiel-Format: https://www.gemeinde.ch/schulanmeldung`;
       const websiteResponse = await websiteResult.response;
       const schoolWebsiteUrl = websiteResponse.text().trim();
 
+      // Validate and clean the website URL
+      const validatedWebsiteUrl = validateAndCleanUrl(schoolWebsiteUrl);
+
       // Find school authority details
-      const authorityPrompt = `Was ist der Name, die E-Mail-Adresse und die offizielle Amtssprache (Deutsch, Französisch oder Italienisch) der Schulverwaltung (Schulbehörde) für die Gemeinde ${userMunicipality} im Kanton ${userCanton} in der Schweiz?
+      const authorityPrompt = `Was ist der Name, die E-Mail-Adresse und die offizielle Amtssprache (Deutsch, Französisch oder Italienisch) der Schulverwaltung (Schulbehörde) für die Gemeinde ${cleanMunicipality} im Kanton ${cleanCanton} in der Schweiz?
 
 Antworte im JSON-Format:
 {
@@ -86,54 +131,67 @@ Antworte im JSON-Format:
       } catch (parseError) {
         console.warn('Failed to parse authority data, using fallback');
         authorityData = {
-          school_authority_name: `Schulamt ${userMunicipality}`,
-          school_authority_email: `schulamt@${userMunicipality.toLowerCase().replace(/\s+/g, '')}.ch`,
-          official_language: userCanton === 'ZH' || userCanton === 'BE' || userCanton === 'AG' ? 'Deutsch' : 
-                           userCanton === 'VD' || userCanton === 'GE' || userCanton === 'NE' ? 'Französisch' : 'Italienisch',
+          school_authority_name: `Schulamt ${cleanMunicipality}`,
+          school_authority_email: `schulamt@${cleanMunicipality.toLowerCase().replace(/\s+/g, '')}.ch`,
+          official_language: officialLanguage,
           contact_phone: '+41 XX XXX XX XX',
-          address: `${userMunicipality}, ${userCanton}`
+          address: `${cleanMunicipality}, ${cleanCanton}`
         };
       }
 
-      return NextResponse.json({
-        success: true,
-        school_website_url: schoolWebsiteUrl,
+      const resultData = {
+        school_website_url: validatedWebsiteUrl || `https://www.schule-${cleanMunicipality.toLowerCase().replace(/\s+/g, '')}.ch`,
         school_authority_name: authorityData.school_authority_name,
         school_authority_email: authorityData.school_authority_email,
-        official_language: authorityData.official_language,
-        contact_phone: authorityData.contact_phone,
-        address: authorityData.address,
-        municipality: userMunicipality,
-        canton: userCanton,
-        processing_method: 'Gemini AI',
-        timestamp: new Date().toISOString()
+        official_language: authorityData.official_language || officialLanguage,
+        contact_phone: authorityData.contact_phone || '+41 XX XXX XX XX',
+        address: authorityData.address || `${cleanMunicipality}, ${cleanCanton}`,
+        cached_at: new Date().toISOString()
+      };
+
+      // Cache the result
+      await setCachedResult(cacheKey, 'school_website', cleanMunicipality, cleanCanton, resultData, userId);
+
+      return NextResponse.json({
+        success: true,
+        ...resultData,
+        from_cache: false
       });
 
     } catch (aiError) {
       console.error('AI Processing Error:', aiError);
       
-      // Fallback response
+      // Fallback data
+      const officialLanguage = getOfficialLanguage(cleanCanton);
+      const fallbackData = {
+        school_website_url: `https://www.schule-${cleanMunicipality.toLowerCase().replace(/\s+/g, '')}.ch`,
+        school_authority_name: `Schulamt ${cleanMunicipality}`,
+        school_authority_email: `schulamt@${cleanMunicipality.toLowerCase().replace(/\s+/g, '')}.ch`,
+        official_language: officialLanguage,
+        contact_phone: '+41 XX XXX XX XX',
+        address: `${cleanMunicipality}, ${cleanCanton}`,
+        cached_at: new Date().toISOString(),
+        fallback: true
+      };
+      
+      // Cache the fallback result
+      await setCachedResult(cacheKey, 'school_website', cleanMunicipality, cleanCanton, fallbackData, userId);
+      
       return NextResponse.json({
         success: true,
-        school_website_url: `https://www.${userMunicipality.toLowerCase().replace(/\s+/g, '')}.ch/schule`,
-        school_authority_name: `Schulamt ${userMunicipality}`,
-        school_authority_email: `schulamt@${userMunicipality.toLowerCase().replace(/\s+/g, '')}.ch`,
-        official_language: userCanton === 'ZH' || userCanton === 'BE' || userCanton === 'AG' ? 'Deutsch' : 
-                         userCanton === 'VD' || userCanton === 'GE' || userCanton === 'NE' ? 'Französisch' : 'Italienisch',
-        contact_phone: '+41 XX XXX XX XX',
-        address: `${userMunicipality}, ${userCanton}`,
-        municipality: userMunicipality,
-        canton: userCanton,
-        processing_method: 'Fallback',
-        timestamp: new Date().toISOString()
+        ...fallbackData,
+        message: 'Using fallback data. Please verify the information is correct.'
       });
     }
 
   } catch (error) {
-    console.error('School Website API Error:', error);
-    return NextResponse.json({ 
-      error: 'Failed to find school website',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    console.error('School website search error:', error);
+    return NextResponse.json(
+      { 
+        error: 'Failed to find school website',
+        code: 'SEARCH_FAILED'
+      },
+      { status: 500 }
+    );
   }
 }
