@@ -358,7 +358,6 @@ INSERT INTO public.task_variants (
   true,
   7,
   'https://www.sem.admin.ch/sem/en/home/themen/aufenthalt/eu_efta.html',
-  'Official SEM Information',
   '[
     {"text": "Valid passport or ID card", "required": true},
     {"text": "Proof of employment or job offer", "required": true},
@@ -396,7 +395,6 @@ INSERT INTO public.task_variants (
   true,
   3,
   'https://www.sem.admin.ch/sem/en/home/themen/aufenthalt/nicht_eu_efta.html',
-  'Official SEM Information',
   '[
     {"text": "Valid passport", "required": true},
     {"text": "Work permit approval letter", "required": true},

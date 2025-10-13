@@ -87,7 +87,6 @@ We''ll remind you to check on the status:',
   7,
   true,
   'https://www.sem.admin.ch/sem/en/home/themen/aufenthalt.html',
-  'Official SEM Information',
   '[
     {"text": "Biometric appointment letter", "required": true},
     {"text": "Valid passport or ID", "required": true},
