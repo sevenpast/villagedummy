@@ -76,7 +76,6 @@ export async function POST(request: NextRequest) {
     try {
       // Use fallback OCR implementation (Google Cloud Vision not available in production)
       // This provides realistic Swiss form data for development and testing
-        // Fallback: Enhanced mock OCR with realistic Swiss form data
         ocrResults = `Document Type: Swiss Municipality Registration Form
         Language: German/French/Italian
         Confidence: 0.85
