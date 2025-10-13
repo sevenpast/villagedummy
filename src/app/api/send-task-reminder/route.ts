@@ -12,7 +12,14 @@ export async function POST(request: NextRequest) {
 
     // Send email immediately if "send now"
     if (reminderType === 'now') {
-      // Use the working simple email test API
+      // Check if Resend API key is available
+      const resendApiKey = process.env.RESEND_API_KEY
+      if (!resendApiKey) {
+        return NextResponse.json({ 
+          error: 'RESEND_API_KEY not configured' 
+        }, { status: 500 })
+      }
+
       const emailData = {
         from: 'Village App <noreply@resend.dev>',
         to: [userEmail],
@@ -28,38 +35,44 @@ export async function POST(request: NextRequest) {
         `
       }
 
-      // Call the working simple email test API
-      const emailResponse = await fetch('/api/test-email-simple-fix', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          customEmail: userEmail,
-          customSubject: `🔔 Reminder: ${taskTitle}`,
-          customHtml: emailData.html
-        }),
-      })
-
-      if (emailResponse.ok) {
-        const emailResult = await emailResponse.json()
-        
-        return NextResponse.json({
-          success: true,
-          message: '📧 Reminder email sent successfully!',
-          data: {
-            task_id: taskId,
-            sent_to: userEmail,
-            task_title: taskTitle,
-            email_result: emailResult
-          }
+      try {
+        // Send via Resend API directly
+        const resendResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(emailData),
         })
-      } else {
-        const errorText = await emailResponse.text()
-        console.error('Email API error:', errorText)
+
+        if (resendResponse.ok) {
+          const emailResult = await resendResponse.json()
+          
+          return NextResponse.json({
+            success: true,
+            message: '📧 Reminder email sent successfully!',
+            data: {
+              task_id: taskId,
+              sent_to: userEmail,
+              task_title: taskTitle,
+              email_id: emailResult.id
+            }
+          })
+        } else {
+          const errorText = await resendResponse.text()
+          console.error('Resend API error:', errorText)
+          return NextResponse.json({ 
+            error: 'Failed to send email via Resend API',
+            details: errorText,
+            status: resendResponse.status
+          }, { status: 500 })
+        }
+      } catch (fetchError) {
+        console.error('Fetch error:', fetchError)
         return NextResponse.json({ 
-          error: 'Failed to send reminder email',
-          details: errorText
+          error: 'Network error when sending email',
+          details: fetchError instanceof Error ? fetchError.message : 'Unknown error'
         }, { status: 500 })
       }
     }
