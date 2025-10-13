@@ -112,3 +112,4 @@ CREATE INDEX IF NOT EXISTS idx_privacy_settings_user_id ON public.privacy_settin
 
 -- Success message
 SELECT 'SUCCESS: Quick GDPR setup completed - ready for testing!' as status;
+

@@ -306,3 +306,4 @@ export function searchMunicipalities(query: string, limit: number = 20): Municip
   })
   .slice(0, limit)
 }
+

@@ -455,3 +455,4 @@ ON CONFLICT (document_type, version, language) DO NOTHING;
 
 -- Success message
 SELECT 'SUCCESS: DSGVO/GDPR Compliance System (Simplified) implemented successfully!' as status;
+

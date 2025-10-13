@@ -352,3 +352,4 @@ function removeDuplicates(municipalities: MunicipalityData[]): MunicipalityData[
     return true
   })
 }
+

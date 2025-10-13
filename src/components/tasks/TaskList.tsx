@@ -203,11 +203,56 @@ export function TaskList({ moduleNumber = 1 }: TaskListProps) {
           return
         }
 
+        // Get user profile to determine correct variants
+        const { data: userProfile } = await supabase
+          .from('user_profiles')
+          .select('has_children, country_of_origin')
+          .eq('user_id', user.id)
+          .single()
+
+        console.log('User profile for variant selection:', userProfile)
+
         // Transform the data to match the expected format
         let transformedTasks = []
         try {
           transformedTasks = tasksData?.map(task => {
-            const variant = Array.isArray(task.task_variants) ? task.task_variants[0] : task.task_variants;
+            // Select the correct variant based on user profile
+            let selectedVariant = null
+            const variants = Array.isArray(task.task_variants) ? task.task_variants : [task.task_variants]
+            
+            if (task.task_number === 4) {
+              // Task 4: Select variant based on has_children
+              if (userProfile?.has_children === true) {
+                selectedVariant = variants.find(v => v.variant_name === 'with_children')
+              } else if (userProfile?.has_children === false) {
+                selectedVariant = variants.find(v => v.variant_name === 'without_children')
+              } else {
+                selectedVariant = variants.find(v => v.variant_name === 'unknown_children')
+              }
+            } else if (task.task_number === 1 || task.task_number === 3) {
+              // Task 1 & 3: Select variant based on country_of_origin
+              const country = userProfile?.country_of_origin
+              if (['germany', 'austria', 'france', 'italy', 'spain', 'portugal', 'netherlands', 'belgium', 'luxembourg', 'denmark', 'sweden', 'norway', 'finland', 'iceland', 'liechtenstein', 'switzerland'].includes(country)) {
+                selectedVariant = variants.find(v => v.variant_name === 'eu_efta')
+              } else if (['united-kingdom', 'united-states', 'canada', 'australia', 'new-zealand', 'japan', 'south-korea', 'singapore', 'malaysia', 'thailand', 'mauritius', 'seychelles', 'costa-rica', 'panama', 'venezuela', 'ecuador', 'peru', 'macau', 'brunei', 'andorra', 'monaco', 'san-marino', 'vatican-city'].includes(country)) {
+                selectedVariant = variants.find(v => v.variant_name === 'visa_exempt')
+              } else if (['china', 'india', 'brazil', 'russia', 'south-africa', 'turkey', 'egypt', 'nigeria', 'philippines', 'vietnam', 'indonesia', 'sri-lanka', 'bangladesh', 'pakistan', 'iran', 'iraq', 'afghanistan', 'ethiopia', 'kenya', 'morocco', 'algeria', 'tunisia', 'ukraine', 'belarus', 'moldova', 'georgia', 'armenia', 'azerbaijan', 'kazakhstan', 'uzbekistan', 'kyrgyzstan', 'tajikistan', 'turkmenistan', 'mongolia', 'nepal', 'bhutan', 'myanmar', 'cambodia', 'laos', 'north-korea', 'taiwan', 'hong-kong', 'macau'].includes(country)) {
+                selectedVariant = variants.find(v => v.variant_name === 'visa_required')
+              } else {
+                selectedVariant = variants.find(v => v.variant_name === 'no_info')
+              }
+            } else {
+              // Other tasks: Use default or first available variant
+              selectedVariant = variants.find(v => v.variant_name === 'default') || variants[0]
+            }
+            
+            // Fallback to first variant if no specific variant found
+            if (!selectedVariant) {
+              selectedVariant = variants[0]
+            }
+            
+            console.log(`Task ${task.task_number}: Selected variant ${selectedVariant?.variant_name} for user profile:`, userProfile)
+            
             const progress = Array.isArray(task.user_task_progress) ? task.user_task_progress[0] : task.user_task_progress;
             
             return {
@@ -216,22 +261,22 @@ export function TaskList({ moduleNumber = 1 }: TaskListProps) {
               title: task.title,
               priority: task.priority,
               display_order: task.display_order,
-              variant_id: variant?.id || '',
-              variant_name: variant?.variant_name || 'default',
-              intro_text: variant?.intro_text || '',
-              info_box_content: variant?.info_box_content || '',
-              question_text: variant?.question_text,
-              actions: variant?.actions,
-              modal_title: variant?.modal_title,
-              modal_content: variant?.modal_content,
-              modal_has_reminder: variant?.modal_has_reminder || false,
-              modal_default_reminder_days: variant?.modal_default_reminder_days || 7,
-              modal_has_email_generator: variant?.modal_has_email_generator || false,
-              modal_has_pdf_upload: variant?.modal_has_pdf_upload || false,
-              modal_has_school_email_generator: variant?.modal_has_school_email_generator || false,
-              official_link_url: variant?.official_link_url,
-              official_link_label: variant?.official_link_label,
-              checklist_items: variant?.checklist_items,
+              variant_id: selectedVariant?.id || '',
+              variant_name: selectedVariant?.variant_name || 'default',
+              intro_text: selectedVariant?.intro_text || '',
+              info_box_content: selectedVariant?.info_box_content || '',
+              question_text: selectedVariant?.question_text,
+              actions: selectedVariant?.actions,
+              modal_title: selectedVariant?.modal_title,
+              modal_content: selectedVariant?.modal_content,
+              modal_has_reminder: selectedVariant?.modal_has_reminder || false,
+              modal_default_reminder_days: selectedVariant?.modal_default_reminder_days || 7,
+              modal_has_email_generator: selectedVariant?.modal_has_email_generator || false,
+              modal_has_pdf_upload: selectedVariant?.modal_has_pdf_upload || false,
+              modal_has_school_email_generator: selectedVariant?.modal_has_school_email_generator || false,
+              official_link_url: selectedVariant?.official_link_url,
+              official_link_label: selectedVariant?.official_link_label,
+              checklist_items: selectedVariant?.checklist_items,
               user_status: progress?.status || 'not_started',
               user_completed_at: progress?.completed_at
             };

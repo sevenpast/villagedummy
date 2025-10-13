@@ -60,6 +60,7 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [reminderDays, setReminderDays] = useState(task.modal_default_reminder_days || 7)
+  const [reminderTime, setReminderTime] = useState('1_week')
   const [userCanton, setUserCanton] = useState<string | null>(null)
   const [userMunicipality, setUserMunicipality] = useState<string | null>(null)
   const [hasChildren, setHasChildren] = useState<boolean>(false)
@@ -69,6 +70,8 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
   const [isLoadingSchoolWebsite, setIsLoadingSchoolWebsite] = useState(false)
   const [schoolEmailData, setSchoolEmailData] = useState<any>(null)
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false)
+  const [municipalityEmailData, setMunicipalityEmailData] = useState<any>(null)
+  const [isGeneratingMunicipalityEmail, setIsGeneratingMunicipalityEmail] = useState(false)
   const [dynamicInfoBoxContent, setDynamicInfoBoxContent] = useState<string>('')
   
   const supabase = createClient()
@@ -128,6 +131,21 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
 
     loadUserProfile()
   }, [supabase])
+
+  // Auto-load municipality website when modal opens for Task 3
+  useEffect(() => {
+    if (isModalOpen && task.task_number === 3 && userMunicipality && userCanton && !municipalityWebsite) {
+      loadMunicipalityWebsite()
+    }
+  }, [isModalOpen, task.task_number, userMunicipality, userCanton, municipalityWebsite])
+
+  // Auto-load school website when modal opens for Task 4
+  useEffect(() => {
+    if (isModalOpen && task.task_number === 4 && userMunicipality && userCanton && !schoolWebsite) {
+      loadSchoolWebsite()
+    }
+  }, [isModalOpen, task.task_number, userMunicipality, userCanton, schoolWebsite])
+
 
   const getPriorityColor = (priority: number) => {
     switch (priority) {
@@ -288,16 +306,22 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
 
     return (
       <div className="mt-4">
-        <h4 className="text-sm font-medium text-gray-900 mb-2">Checklist:</h4>
+        <h4 className="text-sm font-medium text-gray-900 mb-2">Documents usually required at the Gemeinde (municipality):</h4>
         <ul className="space-y-1">
-          {task.checklist_items.map((item: any, index: number) => (
-            <li key={index} className="flex items-center text-sm text-gray-600">
-              <span className={`mr-2 ${item.required ? 'text-red-500' : 'text-gray-400'}`}>
-                {item.required ? '•' : '○'}
-              </span>
-              {item.text}
-            </li>
-          ))}
+          {task.checklist_items.map((item: any, index: number) => {
+            // Handle both string and object formats
+            const itemText = typeof item === 'string' ? item : item.text || item
+            const isRequired = typeof item === 'object' ? item.required : true
+            
+            return (
+              <li key={index} className="flex items-center text-sm text-gray-600">
+                <span className={`mr-2 ${isRequired ? 'text-red-500' : 'text-gray-400'}`}>
+                  {isRequired ? '•' : '○'}
+                </span>
+                {itemText}
+              </li>
+            )
+          })}
         </ul>
       </div>
     )
@@ -455,10 +479,73 @@ Best regards,
     }
   }
 
-  const loadSchoolWebsite = async () => {
+  const generateMunicipalityEmail = async () => {
     if (!userMunicipality || !userCanton) {
       alert('Municipality and canton information not found in your profile. Please update your profile first.')
       return
+    }
+
+    setIsGeneratingMunicipalityEmail(true)
+    try {
+      // Get user data
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('User not authenticated')
+      }
+
+      const response = await fetch('/api/municipality-email-generator', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          municipality: userMunicipality,
+          canton: userCanton
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to generate municipality email')
+      }
+
+      if (result.success) {
+        setMunicipalityEmailData(result)
+        
+        // Generate mailto link with multilingual content
+        const subject = encodeURIComponent(result.email_subject || 'Municipality Registration Inquiry')
+        const body = encodeURIComponent(result.email_body || '')
+        const cc = result.user_email ? `&cc=${encodeURIComponent(result.user_email)}` : ''
+        const mailtoUrl = `mailto:${result.municipality_authority_email}?subject=${subject}&body=${body}${cc}`
+        
+        // Open the mailto link
+        window.open(mailtoUrl)
+        
+        if (result.from_cache) {
+          console.log('Municipality email data loaded from cache')
+        }
+        if (result.fallback) {
+          console.warn('Using fallback municipality email data')
+        }
+      } else {
+        throw new Error(result.error || 'Failed to generate municipality email')
+      }
+    } catch (error) {
+      console.error('Error generating municipality email:', error)
+      alert('Failed to generate municipality email. Please try again.')
+    } finally {
+      setIsGeneratingMunicipalityEmail(false)
+    }
+  }
+
+  const loadSchoolWebsite = async () => {
+    console.log('loadSchoolWebsite called with:', { userMunicipality, userCanton })
+    
+    if (!userMunicipality || !userCanton) {
+      console.warn('Municipality or canton not available:', { userMunicipality, userCanton })
+      // Try to load anyway with default values
     }
 
     setIsLoadingSchoolWebsite(true)
@@ -476,12 +563,13 @@ Best regards,
         },
         body: JSON.stringify({
           userId: user.id,
-          municipality: userMunicipality,
-          canton: userCanton
+          municipality: userMunicipality || 'Zürich',
+          canton: userCanton || 'ZH'
         }),
       })
 
       const result = await response.json()
+      console.log('School website API response:', result)
 
       if (!response.ok) {
         throw new Error(result.error || 'Failed to find school website')
@@ -489,6 +577,7 @@ Best regards,
 
       if (result.success && result.school_website_url) {
         setSchoolWebsite(result.school_website_url)
+        console.log('School website set to:', result.school_website_url)
         if (result.from_cache) {
           console.log('School website loaded from cache')
         }
@@ -500,7 +589,8 @@ Best regards,
       }
     } catch (error) {
       console.error('Error loading school website:', error)
-      alert(`Error: ${error instanceof Error ? error.message : 'Failed to load school website'}`)
+      // Don't show alert, just log the error
+      console.log('School website loading failed, will show loading message')
     } finally {
       setIsLoadingSchoolWebsite(false)
     }
@@ -543,10 +633,17 @@ Best regards,
                 <div className="text-sm text-gray-800 whitespace-pre-line">
                   {dynamicInfoBoxContent || task.info_box_content}
                 </div>
+                
+                {/* Alert for users without children */}
+                {task.task_number === 4 && !hasChildren && (
+                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-sm text-yellow-800">
+                      You are seeing this task, because we don't know whether you have children. For a more tailored experience, please complete your profile.
+                    </p>
+                  </div>
+                )}
               </div>
 
-              {/* Checklist */}
-              {renderChecklist()}
 
               {/* Official Link */}
               {task.official_link_url && (
@@ -565,38 +662,6 @@ Best regards,
                 </div>
               )}
 
-              {/* PDF Upload Section - Show first for Task 3 and 4 */}
-              {task.modal_has_pdf_upload && (
-                <div className="border-t border-gray-200 pt-4 mb-4">
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      📄 PDF Form Processing
-                    </h3>
-                    <p className="text-sm text-gray-700 mb-4">
-                    </p>
-                    
-                    {/* Upload Button that shows error message */}
-                    <button
-                      onClick={() => {
-                        alert("Sorry, this function still doesn't work as wished. I am doing my best to fix it as soon as possible.");
-                      }}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                      + Upload PDF Document
-                    </button>
-                    
-                    <p className="text-xs text-gray-600 mt-2">
-                      Upload a PDF form to automatically fill it with your profile data
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Supported: PDF files up to 10MB
-                    </p>
-                  </div>
-                </div>
-              )}
 
               {/* Question and Actions - Show after PDF upload */}
               {task.question_text && task.actions && task.actions.length > 0 && (
@@ -649,20 +714,15 @@ Best regards,
             <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">{task.modal_title}</h3>
               
-              {/* Municipality Website Section for Task 3 */}
-              {task.modal_has_pdf_upload && task.task_id !== 'task-4-school-registration' && (
+              {/* Municipality Website Section for Task 3 (not for no_info variant) */}
+              {task.modal_has_pdf_upload && task.task_number === 3 && task.variant_name !== 'no_info' && (
                 <div className="mb-6">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="mb-2">
                     <span className="text-sm font-medium text-gray-700">Official Website:</span>
-                    <button
-                      onClick={loadMunicipalityWebsite}
-                      disabled={isLoadingWebsite}
-                      className="px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 disabled:opacity-50"
-                    >
-                      {isLoadingWebsite ? 'Loading...' : 'Load Website'}
-                    </button>
                   </div>
-                  {municipalityWebsite ? (
+                  {isLoadingWebsite ? (
+                    <p className="text-sm text-gray-500 italic">Loading website...</p>
+                  ) : municipalityWebsite ? (
                     <a
                       href={municipalityWebsite}
                       target="_blank"
@@ -672,7 +732,7 @@ Best regards,
                       {municipalityWebsite}
                     </a>
                   ) : (
-                    <p className="text-sm text-gray-500 italic">Click "Load Website" to find your municipality's official website</p>
+                    <p className="text-sm text-gray-500 italic">Website not found</p>
                   )}
                 </div>
               )}
@@ -712,10 +772,22 @@ Best regards,
                 {task.modal_content}
               </div>
 
-              {/* Task 4 Specific Content */}
-              {task.task_id === 'task-4-school-registration' && (
-                <div className="mb-6 space-y-4">
-                  {/* Warning */}
+              {/* Checklist for Task 3 (not for no_info variant) */}
+              {task.task_number === 3 && task.variant_name !== 'no_info' && renderChecklist()}
+
+
+              {/* Note about municipality variations for Task 3 (not for no_info variant) */}
+              {task.task_number === 3 && task.variant_name !== 'no_info' && (
+                <div className="mb-6">
+                  <p className="text-xs text-gray-500 italic">
+                    Note: Required documents may vary by municipality. Please check with your local office for specific requirements.
+                  </p>
+                </div>
+              )}
+
+              {/* Important Notice for Task 3 visa_exempt and visa_required */}
+              {task.task_number === 3 && (task.variant_name === 'visa_exempt' || task.variant_name === 'visa_required') && (
+                <div className="mb-6">
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                     <div className="flex items-start">
                       <svg className="w-5 h-5 text-red-400 mr-3 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -724,69 +796,53 @@ Best regards,
                       <div>
                         <h4 className="text-sm font-medium text-red-800">Important Notice</h4>
                         <p className="text-sm text-red-700 mt-1">
-                          Don't delay! School registration is mandatory for all children aged 4-16 in Switzerland. 
-                          Contact your local school authority immediately after arrival to avoid delays.
+                          Don't delay! School registration is mandatory immediately after arrival.
                         </p>
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
 
-                  {/* Checklist */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-blue-900 mb-3">Required Documents Checklist</h4>
-                    <p className="text-xs text-blue-700 mb-3">
-                      Note: Requirements may vary by canton and municipality. Contact your local school authority for specific requirements.
+
+              {/* PDF Upload Section for Task 3 (not for no_info variant) */}
+              {task.modal_has_pdf_upload && task.task_number === 3 && task.variant_name !== 'no_info' && (
+                <div className="mb-6">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      📄 PDF Form Processing
+                    </h3>
+                    <p className="text-sm text-gray-700 mb-4">
                     </p>
-                    <ul className="text-sm text-blue-800 space-y-2">
-                      <li className="flex items-start">
-                        <svg className="w-4 h-4 mr-2 mt-0.5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        Birth certificate (translated and certified)
-                      </li>
-                      <li className="flex items-start">
-                        <svg className="w-4 h-4 mr-2 mt-0.5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        Vaccination records (translated and certified)
-                      </li>
-                      <li className="flex items-start">
-                        <svg className="w-4 h-4 mr-2 mt-0.5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        Proof of residence (rental agreement or property deed)
-                      </li>
-                      <li className="flex items-start">
-                        <svg className="w-4 h-4 mr-2 mt-0.5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        Previous school records (if applicable)
-                      </li>
-                      <li className="flex items-start">
-                        <svg className="w-4 h-4 mr-2 mt-0.5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        Language assessment (may be required)
-                      </li>
-                      <li className="flex items-start">
-                        <svg className="w-4 h-4 mr-2 mt-0.5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        Health insurance certificate
-                      </li>
-                      <li className="flex items-start">
-                        <svg className="w-4 h-4 mr-2 mt-0.5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        Passport or ID documents
-                      </li>
-                    </ul>
+                    
+                    {/* Upload Button that shows error message */}
+                    <button
+                      onClick={() => {
+                        alert("Sorry, this function still doesn't work as wished. I am doing my best to fix it as soon as possible.");
+                      }}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      + Upload PDF Document
+                    </button>
+                    
+                    <p className="text-xs text-gray-600 mt-2">
+                      Upload a PDF form to automatically fill it with your profile data
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Supported: PDF files up to 10MB
+                    </p>
                   </div>
                 </div>
               )}
+
+
+
               
-              {/* Email Generator Button */}
-              {task.modal_has_email_generator && (
+              {/* Email Generator Button - Only for tasks that don't have school email generator */}
+              {task.modal_has_email_generator && task.task_number !== 3 && task.task_number !== 4 && (
                 <div className="mb-6">
                   <button
                     onClick={generateEmailToCanton}
@@ -797,49 +853,157 @@ Best regards,
                 </div>
               )}
               
-              {/* School Email Generator Button for Task 3 and Task 4 */}
-              {task.modal_has_school_email_generator && hasChildren && (
+
+              {/* Municipality Email Generator Button for Task 3 (not for no_info variant) */}
+              {task.modal_has_email_generator && task.task_number === 3 && task.variant_name !== 'no_info' && (
                 <div className="mb-6">
                   <button
-                    onClick={generateSchoolEmail}
-                    disabled={isGeneratingEmail}
-                    className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={generateMunicipalityEmail}
+                    disabled={isGeneratingMunicipalityEmail}
+                    className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isGeneratingEmail ? 'Generating Email...' : 'Write a mail to school authority'}
+                    {isGeneratingMunicipalityEmail ? 'Generating Email...' : 'Write a mail to municipality'}
                   </button>
-                  {schoolEmailData && (
-                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
-                      <p className="text-xs text-green-700">
-                        Email generated for: {schoolEmailData.school_authority_name}
-                      </p>
-                      <p className="text-xs text-green-600">
-                        Language: {schoolEmailData.official_language}
-                      </p>
+                </div>
+              )}
+
+              {/* Task 5 Modal Content */}
+              {task.task_number === 5 && (
+                <div className="mb-6 space-y-4">
+                  {/* Modal Content */}
+                  <div className="text-sm text-gray-800 whitespace-pre-line">
+                    {task.modal_content}
+                  </div>
+
+                  {/* Email Generator Button */}
+                  {task.modal_has_email_generator && (
+                    <div className="mb-6">
+                      <button
+                        onClick={generateMunicipalityEmail}
+                        disabled={isGeneratingMunicipalityEmail}
+                        className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isGeneratingMunicipalityEmail ? 'Generating Email...' : 'Write a mail to municipality'}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Reminder Section */}
+                  {task.modal_has_reminder && (
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Remind me in:
+                      </label>
+                      <select
+                        value={reminderTime}
+                        onChange={(e) => setReminderTime(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="1_week">1 week</option>
+                        <option value="2_weeks">2 weeks</option>
+                        <option value="1_month">1 month</option>
+                        <option value="2_months">2 months</option>
+                      </select>
                     </div>
                   )}
                 </div>
               )}
-              
-              {task.modal_has_reminder && (
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Remind me in:
-                  </label>
-                  <select
-                    value={reminderDays}
-                    onChange={(e) => setReminderDays(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    aria-label="Select reminder interval"
-                  >
-                    <option value={0}>Send now</option>
-                    <option value={1}>1 day</option>
-                    <option value={3}>3 days</option>
-                    <option value={7}>1 week</option>
-                    <option value={14}>2 weeks</option>
-                    <option value={30}>1 month</option>
-                  </select>
+
+              {/* Task 4 Modal Content - Exact Match */}
+              {task.task_number === 4 && (
+                <div className="mb-6 space-y-4">
+                  {/* Official Website */}
+                  <div>
+                    <p className="text-sm font-medium mb-2">Official Website:</p>
+                    {schoolWebsite ? (
+                      <a
+                        href={schoolWebsite.website_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 underline"
+                      >
+                        {schoolWebsite.website_url}
+                      </a>
+                    ) : (
+                      <p className="text-sm text-gray-500">Loading school website...</p>
+                    )}
+                  </div>
+
+                  {/* Documents Required */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Documents usually required at the Schule (school):</h4>
+                    <ul className="text-sm space-y-1 ml-4">
+                      <li>• Birth certificate of the child</li>
+                      <li>• Vaccination records</li>
+                      <li>• Proof of residence (rental contract or registration certificate)</li>
+                      <li>• Previous school records (if applicable)</li>
+                      <li>• Language assessment (if required by canton)</li>
+                      <li>• Health insurance card</li>
+                      <li>• Passport photos of the child</li>
+                    </ul>
+                    <p className="text-sm mt-2 italic text-gray-600">
+                      Note: Required documents may vary by school. Please check with your local school for specific requirements.
+                    </p>
+                  </div>
+
+                  {/* Important Notice */}
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-start">
+                      <svg className="w-5 h-5 text-red-400 mr-3 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <div>
+                        <h4 className="text-sm font-medium text-red-800">Important Notice</h4>
+                        <p className="text-sm text-red-700 mt-1">
+                          Don't delay! School registration is mandatory immediately after arrival.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* PDF Form Processing */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">📄 PDF Form Processing</h4>
+                    <button
+                      onClick={() => {
+                        alert("Sorry, this function still doesn't work as wished. I am doing my best to fix it as soon as possible.");
+                      }}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      + Upload PDF Document
+                    </button>
+                    <p className="text-sm mt-2">
+                      Upload a PDF form to automatically fill it with your profile data
+                    </p>
+                    <p className="text-sm">
+                      Supported: PDF files up to 10MB
+                    </p>
+                  </div>
                 </div>
               )}
+              
+              {/* Reminder Section */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Remind me in:
+                </label>
+                <select
+                  value={reminderDays}
+                  onChange={(e) => setReminderDays(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  aria-label="Select reminder interval"
+                >
+                  <option value={0}>Send now</option>
+                  <option value={1}>1 day</option>
+                  <option value={3}>3 days</option>
+                  <option value={7}>1 week</option>
+                  <option value={14}>2 weeks</option>
+                  <option value={30}>1 month</option>
+                </select>
+              </div>
               
               <div className="flex gap-3">
                 <button
@@ -848,15 +1012,13 @@ Best regards,
                 >
                   Cancel
                 </button>
-                {task.modal_has_reminder && (
-                  <button
-                    onClick={setReminder}
-                    disabled={isLoading}
-                    className="flex-1 px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-md hover:bg-orange-700 disabled:opacity-50"
-                  >
-                    {isLoading ? 'Sending...' : reminderDays === 0 ? 'Send Now' : 'Set Reminder'}
-                  </button>
-                )}
+                <button
+                  onClick={setReminder}
+                  disabled={isLoading}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-md hover:bg-orange-700 disabled:opacity-50"
+                >
+                  {isLoading ? 'Sending...' : reminderDays === 0 ? 'Send Now' : 'Set Reminder'}
+                </button>
               </div>
             </div>
           </div>

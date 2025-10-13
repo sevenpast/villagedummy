@@ -367,3 +367,4 @@ All templates support the following variables:
 - `{{incidentType}}` - Type of security incident
 - `{{affectedData}}` - Description of affected data
 - `{{responseActions}}` - Actions taken in response
+

@@ -278,3 +278,4 @@ $$;
 
 -- Success message
 SELECT 'SUCCESS: Task 4 (School Registration) implemented successfully!' as status;
+

@@ -87,3 +87,4 @@ SELECT cron.schedule(
   '0 2 * * *', -- Daily at 2 AM
   'SELECT public.cleanup_expired_gemini_cache();'
 );
+

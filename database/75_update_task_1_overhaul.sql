@@ -82,3 +82,4 @@ FROM public.tasks t
 JOIN public.task_variants tv ON t.id = tv.task_id
 WHERE t.task_number = 1
 ORDER BY tv.variant_name;
+

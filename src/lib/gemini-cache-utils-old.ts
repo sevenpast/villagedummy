@@ -21,7 +21,7 @@ export interface MunicipalityInfo {
 
 // Generate cache key for consistent caching
 export function generateCacheKey(
-  type: 'municipality_website' | 'school_website' | 'school_authority' | 'municipality_authority' | 'email_content',
+  type: 'municipality_website' | 'school_website' | 'school_authority' | 'email_content',
   municipality: string,
   canton: string,
   additionalParams?: string
@@ -97,7 +97,7 @@ export async function getCachedResult(
 // Set cached result
 export async function setCachedResult(
   cacheKey: string,
-  cacheType: 'municipality_website' | 'school_website' | 'school_authority' | 'municipality_authority' | 'email_content',
+  cacheType: 'municipality_website' | 'school_website' | 'school_authority' | 'email_content',
   municipality: string,
   canton: string,
   resultData: any,
