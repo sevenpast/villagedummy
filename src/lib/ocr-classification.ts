@@ -348,7 +348,7 @@ export async function getDocumentCategories(): Promise<DocumentCategory[]> {
  */
 export function validateClassification(classification: ClassificationResult): boolean {
   return (
-    classification.category_code &&
+    Boolean(classification.category_code) &&
     typeof classification.confidence === 'number' &&
     classification.confidence >= 0 &&
     classification.confidence <= 1 &&
