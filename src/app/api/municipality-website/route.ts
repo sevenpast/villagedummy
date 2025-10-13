@@ -5,13 +5,13 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth, AuthenticatedRequest } from '@/lib/auth/middleware'
-import { geminiService } from '@/lib/gemini/unified-service'
-import { MunicipalitySearchSchema, validateRequestBody } from '@/lib/validation/schemas'
+import { geminiService, GeminiService } from '@/lib/gemini/unified-service'
+import { SchoolWebsiteSchema, validateRequestBody } from '@/lib/validation/schemas'
 import { withErrorHandling, createError, formatValidationError } from '@/lib/error-handling'
 
 const municipalityWebsiteHandler = async (request: AuthenticatedRequest): Promise<NextResponse> => {
   const body = await request.json()
-  const { municipality, canton } = validateRequestBody(MunicipalitySearchSchema, body)
+  const { municipality, canton } = validateRequestBody(SchoolWebsiteSchema, body)
   
   const user = request.user
 
@@ -23,7 +23,7 @@ const municipalityWebsiteHandler = async (request: AuthenticatedRequest): Promis
   }
 
   // Validate the URL if present
-  if (result.data?.website_url && !geminiService.validateUrl(result.data.website_url)) {
+  if (result.data?.website_url && !GeminiService.validateUrl(result.data.website_url)) {
     throw createError.validation('Invalid website URL returned', 'The generated URL is not valid')
   }
 

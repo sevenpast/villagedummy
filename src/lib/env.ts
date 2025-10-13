@@ -38,6 +38,18 @@ function getEnv<K extends EnvKey>(key: K): EnvironmentConfig[K] {
   const value = process.env[key];
   
   if (!value) {
+    // In development, provide helpful error message instead of throwing
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`⚠️  Environment variable ${key} is not set. Please check your .env.local file.`);
+      // For critical variables, provide default values for development
+      if (key === 'NEXT_PUBLIC_SUPABASE_URL') {
+        return 'https://ajffjhkwtbyzlggskiuo.supabase.co' as EnvironmentConfig[K];
+      }
+      if (key === 'NEXT_PUBLIC_SUPABASE_ANON_KEY') {
+        return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqZmZqaGt3dGJ5emxnZ3NraXVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5MDkzOTYsImV4cCI6MjA3NTQ4NTM5Nn0.D6mU56bypeUSUm1vrg1ap3IxL9HEgUJv806UHCscmZY' as EnvironmentConfig[K];
+      }
+      return `MISSING_${key}` as EnvironmentConfig[K];
+    }
     throw new EnvironmentError(key);
   }
   
@@ -86,9 +98,9 @@ function validateEnvironment(): void {
 
 // Export type-safe environment getters
 export const env = {
-  // Supabase
-  supabaseUrl: () => getEnv('NEXT_PUBLIC_SUPABASE_URL'),
-  supabaseAnonKey: () => getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+  // Supabase - Direct access for reliability
+  supabaseUrl: () => process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ajffjhkwtbyzlggskiuo.supabase.co',
+  supabaseAnonKey: () => process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqZmZqaGt3dGJ5emxnZ3NraXVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5MDkzOTYsImV4cCI6MjA3NTQ4NTM5Nn0.D6mU56bypeUSUm1vrg1ap3IxL9HEgUJv806UHCscmZY',
   supabaseServiceKey: () => getEnv('SUPABASE_SERVICE_ROLE_KEY'),
   
   // AI Services

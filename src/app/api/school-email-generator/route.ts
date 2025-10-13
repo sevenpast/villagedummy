@@ -52,7 +52,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
 
     // Create mailto URL
     const emailData = emailResult.data
-    const mailtoUrl = `mailto:${schoolInfo.email || 'info@schule.ch'}?cc=${userInfo.userEmail}&subject=${encodeURIComponent(emailData.subject)}&body=${encodeURIComponent(emailData.body_original + '\n\n--- English Version ---\n' + emailData.body_english)}`
+    const mailtoUrl = `mailto:${schoolInfo.email || 'info@schule.ch'}?cc=${userInfo.userEmail}&subject=${encodeURIComponent(emailData?.subject || 'School Registration')}&body=${encodeURIComponent((emailData?.body_original || 'School registration request') + '\n\n--- English Version ---\n' + (emailData?.body_english || 'School registration request'))}`
 
     return NextResponse.json({
       success: true,

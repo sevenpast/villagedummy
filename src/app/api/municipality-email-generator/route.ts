@@ -6,12 +6,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth, AuthenticatedRequest } from '@/lib/auth/middleware'
 import { geminiService } from '@/lib/gemini/unified-service'
-import { MunicipalitySearchSchema, validateRequestBody } from '@/lib/validation/schemas'
+import { MunicipalityEmailSchema, validateRequestBody } from '@/lib/validation/schemas'
 
 export const POST = withAuth(async (request: AuthenticatedRequest) => {
   try {
     const body = await request.json()
-    const { municipality, canton } = validateRequestBody(MunicipalitySearchSchema, body)
+    const { municipality, canton } = validateRequestBody(MunicipalityEmailSchema, body)
     
     const user = request.user
 
@@ -52,7 +52,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
     // Create mailto URL (use generic municipality email if not found)
     const emailData = emailResult.data
     const municipalityEmail = municipalityInfo.email || `info@${municipality.toLowerCase().replace(/\s+/g, '')}.ch`
-    const mailtoUrl = `mailto:${municipalityEmail}?cc=${userInfo.userEmail}&subject=${encodeURIComponent(emailData.subject)}&body=${encodeURIComponent(emailData.body_original + '\n\n--- English Version ---\n' + emailData.body_english)}`
+    const mailtoUrl = `mailto:${municipalityEmail}?cc=${userInfo.userEmail}&subject=${encodeURIComponent(emailData?.subject || 'Municipality Registration')}&body=${encodeURIComponent((emailData?.body_original || 'Registration request') + '\n\n--- English Version ---\n' + (emailData?.body_english || 'Registration request'))}`
 
     return NextResponse.json({
       success: true,

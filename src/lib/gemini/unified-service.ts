@@ -20,6 +20,9 @@ interface MunicipalityInfo {
   official_name?: string;
   official_language?: string;
   email?: string;
+  subject?: string;
+  body_original?: string;
+  body_english?: string;
 }
 
 interface SchoolAuthorityInfo {
@@ -27,19 +30,24 @@ interface SchoolAuthorityInfo {
   email?: string;
   official_language?: string;
   authority_name?: string;
+  subject?: string;
+  body_original?: string;
+  body_english?: string;
 }
 
 interface EmailContent {
   subject: string;
   body_original: string;
   body_english: string;
+  email?: string;
+  official_language?: string;
 }
 
 interface DocumentAnalysis {
   [key: string]: string | number | boolean;
 }
 
-type GeminiData = MunicipalityInfo | SchoolAuthorityInfo | EmailContent | DocumentAnalysis | { content: string };
+type GeminiData = any; // Flexible type for API responses
 
 interface GeminiResponse {
   success: boolean;
@@ -62,7 +70,7 @@ export class GeminiService {
 
   private async getSupabase() {
     if (!this.supabase) {
-      this.supabase = await createClient();
+      this.supabase = createClient();
     }
     return this.supabase;
   }

@@ -5,13 +5,13 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth, AuthenticatedRequest } from '@/lib/auth/middleware'
-import { geminiService } from '@/lib/gemini/unified-service'
-import { MunicipalitySearchSchema, validateRequestBody } from '@/lib/validation/schemas'
+import { geminiService, GeminiService } from '@/lib/gemini/unified-service'
+import { SchoolWebsiteSchema, validateRequestBody } from '@/lib/validation/schemas'
 
 export const POST = withAuth(async (request: AuthenticatedRequest) => {
   try {
     const body = await request.json()
-    const { municipality, canton } = validateRequestBody(MunicipalitySearchSchema, body)
+    const { municipality, canton } = validateRequestBody(SchoolWebsiteSchema, body)
     
     const user = request.user
 
@@ -26,7 +26,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
     }
 
     // Validate the URL if present
-    if (result.data?.website_url && !geminiService.validateUrl(result.data.website_url)) {
+    if (result.data?.website_url && !GeminiService.validateUrl(result.data.website_url)) {
       return NextResponse.json({
         error: 'Invalid website URL returned',
         details: 'The generated URL is not valid'

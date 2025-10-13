@@ -144,12 +144,12 @@ export function formatErrorResponse(error: Error | CustomError, requestId?: stri
 
   // Log error using structured logging
   if (process.env.NODE_ENV === 'development' || appError.isOperational) {
-    const { logger } = await import('@/lib/logging');
-    logger.error('API Error', {
+    // Simple console logging for production
+    console.error('API Error:', {
       code: appError.code,
       message: appError.message,
-      details: appError.details,
-      requestId: appError.requestId
+      requestId: appError.requestId,
+      timestamp: appError.timestamp
     });
   }
 
@@ -212,7 +212,13 @@ export function formatValidationError(error: any): CustomError {
 
 // Database error formatter
 export function formatDatabaseError(error: any): CustomError {
-  const { DB_ERROR_CODES } = require('@/lib/constants');
+  // Import DB_ERROR_CODES statically to avoid require()
+  const DB_ERROR_CODES = {
+    NO_ROWS_RETURNED: 'PGRST116',
+    UNIQUE_VIOLATION: '23505',
+    FOREIGN_KEY_VIOLATION: '23503',
+    NOT_NULL_VIOLATION: '23502'
+  };
   
   if (error.code === DB_ERROR_CODES.UNIQUE_VIOLATION) {
     return createError.validation('Record already exists', { constraint: error.constraint });

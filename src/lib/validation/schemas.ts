@@ -20,7 +20,7 @@ export const DocumentDownloadSchema = z.object({
 });
 
 export const DocumentUploadSchema = z.object({
-  file: z.instanceof(File, 'File is required'),
+  file: z.instanceof(File).refine(f => f instanceof File, 'File is required'),
   category: z.string().optional(),
   description: z.string().optional()
 });
@@ -59,6 +59,17 @@ export const MunicipalitySearchSchema = z.object({
   limit: z.number().min(1).max(50).optional().default(10)
 });
 
+export const MunicipalityEmailSchema = z.object({
+  municipality: z.string().min(1, 'Municipality is required'),
+  canton: z.string().min(1, 'Canton is required'),
+  userEmail: emailSchema.optional()
+});
+
+export const SchoolWebsiteSchema = z.object({
+  municipality: z.string().min(1, 'Municipality is required'),
+  canton: z.string().min(1, 'Canton is required')
+});
+
 export const SchoolEmailSchema = z.object({
   municipality: z.string().min(1, 'Municipality is required'),
   canton: z.string().min(1, 'Canton is required'),
@@ -83,7 +94,7 @@ export function validateInput<T>(schema: z.ZodSchema<T>, data: unknown): T {
     return schema.parse(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(err => `${err.path.join('.')}: ${err.message}`);
+      const errorMessages = error.issues.map((err: any) => `${err.path.join('.')}: ${err.message}`);
       throw new Error(`Validation failed: ${errorMessages.join(', ')}`);
     }
     throw error;
