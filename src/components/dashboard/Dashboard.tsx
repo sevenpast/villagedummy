@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 import { User } from '@supabase/supabase-js'
 import { UserProfile } from '@/lib/types'
 import Link from 'next/link'
-import EmailTestButtonSimple from '@/components/EmailTestButtonSimple'
 
 interface DashboardProps {
   user: User
@@ -150,11 +149,6 @@ export function Dashboard({ user }: DashboardProps) {
                 </Link>
               </div>
 
-              {/* Email Test Section */}
-              <div className="mt-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">E-Mail-Test</h3>
-                <EmailTestButtonSimple />
-              </div>
 
       </div>
     </div>
