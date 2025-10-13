@@ -23,7 +23,7 @@ export default function EmailTestButton() {
     } catch (error) {
       setResult({
         success: false,
-        error: 'Network error: ' + (error as Error).message
+        message: 'Network error: ' + (error as Error).message
       })
     } finally {
       setIsLoading(false)
