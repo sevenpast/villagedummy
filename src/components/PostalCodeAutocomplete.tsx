@@ -35,7 +35,7 @@ export default function PostalCodeAutocomplete({
 
   useEffect(() => {
     const searchMunicipalities = async () => {
-      if (value.length >= 2) {
+      if (value.length >= 1) {
         setIsLoading(true);
         try {
           const response = await fetch(`/api/municipalities/search?q=${encodeURIComponent(value)}&limit=20`);
@@ -56,7 +56,7 @@ export default function PostalCodeAutocomplete({
       }
     };
 
-    const timeoutId = setTimeout(searchMunicipalities, 300); // Debounce
+    const timeoutId = setTimeout(searchMunicipalities, 150); // Reduced debounce for faster response
     return () => clearTimeout(timeoutId);
   }, [value]);
 
