@@ -155,7 +155,7 @@ export function DocumentList({ documents, categories, onDocumentDeleted, selecte
 
     } catch (error) {
       console.error('Download failed:', error)
-      alert(`Failed to download file: ${error.message || 'Unknown error'}`)
+      alert(`Failed to download file: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setDownloadingId(null)
     }
