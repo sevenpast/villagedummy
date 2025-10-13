@@ -215,7 +215,7 @@ export async function cacheClassification(
  * Generate file hash for caching
  */
 export async function generateFileHash(fileBuffer: Buffer): Promise<string> {
-  const hashBuffer = await crypto.subtle.digest('SHA-256', fileBuffer);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', fileBuffer.buffer.slice(fileBuffer.byteOffset, fileBuffer.byteOffset + fileBuffer.byteLength));
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
