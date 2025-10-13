@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
         - Processing method: Enhanced Mock OCR
         - Form type: Swiss municipality registration
         - Required fields: All fields marked as mandatory`;
-      }
+      
     } catch (ocrError) {
       console.error('OCR Error:', ocrError);
       
