@@ -1,129 +1,99 @@
-import { createClient } from '@supabase/supabase-js'
+// ============================================================================
+// PROFILE API - SECURED VERSION
+// Fixed IDOR vulnerability by using authenticated user context
+// ============================================================================
+
 import { NextRequest, NextResponse } from 'next/server'
+import { withAuth, AuthenticatedRequest } from '@/lib/auth/middleware'
+import { withErrorHandling, createError } from '@/lib/error-handling'
+import { ProfileUpdateSchema, validateRequestBody } from '@/lib/validation/schemas'
+import { createClient } from '@/lib/supabase/server'
 
-// Service Role Key - nur auf dem Server verfügbar
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const profileHandler = async (request: AuthenticatedRequest): Promise<NextResponse> => {
+  const user = request.user
+  const userId = user.id
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+  // SECURITY FIX: Use authenticated user ID instead of client-provided ID
+  const supabase = await createClient()
+  
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .single()
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
-    }
-
-    console.log('Fetching profile for user:', userId)
-
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('user_id', userId)
-
-    if (error) {
-      console.error('Error fetching profile:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    // Wenn kein Profil gefunden wurde, gib null zurück
-    const profile = data && data.length > 0 ? data[0] : null
-
-    console.log('Profile found:', profile)
-
-    return NextResponse.json({ data: profile })
-  } catch (error) {
-    console.error('API Error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+    throw createError.database('Failed to fetch profile', error)
   }
+
+  return NextResponse.json({ 
+    success: true,
+    data: data || null 
+  })
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { user_id, ...profileData } = body
+const createProfileHandler = async (request: AuthenticatedRequest): Promise<NextResponse> => {
+  const user = request.user
+  const userId = user.id
+  const body = await request.json()
+  const profileData = validateRequestBody(ProfileUpdateSchema, body)
 
-    if (!user_id) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
-    }
+  // SECURITY FIX: Use authenticated user ID
+  const supabase = await createClient()
+  
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .insert({
+      user_id: userId, // SECURE: Use authenticated user ID
+      ...profileData,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .select()
+    .single()
 
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .insert({
-        user_id,
-        ...profileData,
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error creating profile:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ data })
-  } catch (error) {
-    console.error('API Error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  if (error) {
+    throw createError.database('Failed to create profile', error)
   }
+
+  return NextResponse.json({ 
+    success: true,
+    data 
+  })
 }
 
-export async function PUT(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { user_id, ...profileData } = body
+const updateProfileHandler = async (request: AuthenticatedRequest): Promise<NextResponse> => {
+  const user = request.user
+  const userId = user.id
+  const body = await request.json()
+  const profileData = validateRequestBody(ProfileUpdateSchema, body)
 
-    if (!user_id) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
-    }
+  // SECURITY FIX: Use authenticated user ID and upsert for simplicity
+  const supabase = await createClient()
+  
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .upsert({
+      user_id: userId, // SECURE: Use authenticated user ID
+      ...profileData,
+      updated_at: new Date().toISOString()
+    }, { 
+      onConflict: 'user_id' 
+    })
+    .select()
+    .single()
 
-    console.log('Updating profile for user:', user_id, 'with data:', profileData)
-
-    // Prüfe zuerst, ob ein Profil existiert
-    const { data: existingProfile } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .eq('user_id', user_id)
-      .single()
-
-    let result
-    if (existingProfile) {
-      // Update existing profile
-      result = await supabase
-        .from('user_profiles')
-        .update({
-          ...profileData,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user_id)
-        .select()
-        .single()
-    } else {
-      // Insert new profile
-      result = await supabase
-        .from('user_profiles')
-        .insert({
-          user_id,
-          ...profileData,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single()
-    }
-
-    if (result.error) {
-      console.error('Error updating profile:', result.error)
-      return NextResponse.json({ error: result.error.message }, { status: 500 })
-    }
-
-    console.log('Profile updated successfully:', result.data)
-    return NextResponse.json({ data: result.data })
-  } catch (error) {
-    console.error('API Error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  if (error) {
+    throw createError.database('Failed to update profile', error)
   }
+
+  return NextResponse.json({ 
+    success: true,
+    data 
+  })
 }
+
+// SECURITY FIX: All routes now require authentication
+export const GET = withAuth(withErrorHandling(profileHandler))
+export const POST = withAuth(withErrorHandling(createProfileHandler))
+export const PUT = withAuth(withErrorHandling(updateProfileHandler))

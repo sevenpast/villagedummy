@@ -1,23 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth, AuthenticatedRequest } from '@/lib/auth/middleware';
+import { withErrorHandling, createError } from '@/lib/error-handling';
 import { createClient } from '@/lib/supabase/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { env } from '@/lib/env';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const genAI = new GoogleGenerativeAI(env.geminiApiKey());
 
-export async function POST(request: NextRequest) {
-  try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const userId = formData.get('userId') as string;
-    const taskId = formData.get('taskId') as string;
+const pdfOcrHandler = async (request: AuthenticatedRequest): Promise<NextResponse> => {
+  const formData = await request.formData();
+  const file = formData.get('file') as File;
+  const taskId = formData.get('taskId') as string;
+  
+  // SECURITY FIX: Use authenticated user ID instead of client-provided ID
+  const user = request.user;
+  const userId = user.id;
 
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
-    }
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
-    }
+  if (!file) {
+    throw createError.validation('No file provided');
+  }
 
     // Check if API key is configured
     if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your_gemini_api_key_here') {
@@ -366,11 +367,7 @@ Return as JSON with this exact structure:
       language_detected: 'German/French/Italian/English'
     });
 
-  } catch (error) {
-    console.error('PDF OCR Dynamic Error:', error);
-    return NextResponse.json({ 
-      error: 'Failed to process PDF',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
 }
+
+// SECURITY FIX: Export with authentication
+export const POST = withAuth(withErrorHandling(pdfOcrHandler));

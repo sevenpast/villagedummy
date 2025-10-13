@@ -12,8 +12,8 @@ export const urlSchema = z.string().url('Invalid URL format');
 
 // Document-related schemas
 export const DocumentDownloadSchema = z.object({
-  documentId: uuidSchema,
-  userId: uuidSchema
+  documentId: uuidSchema
+  // userId removed - now using authenticated user context
 });
 
 export const DocumentUploadSchema = z.object({

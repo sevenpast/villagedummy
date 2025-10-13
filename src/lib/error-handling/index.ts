@@ -142,13 +142,13 @@ export function formatErrorResponse(error: Error | CustomError, requestId?: stri
     };
   }
 
-  // Log error (only in development or for operational errors)
+  // Log error using structured logging
   if (process.env.NODE_ENV === 'development' || appError.isOperational) {
-    console.error('API Error:', {
+    const { logger } = await import('@/lib/logging');
+    logger.error('API Error', {
       code: appError.code,
       message: appError.message,
       details: appError.details,
-      timestamp: appError.timestamp,
       requestId: appError.requestId
     });
   }
