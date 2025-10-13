@@ -27,9 +27,15 @@ export function DocumentUpload({ categories, onUploaded }: DocumentUploadProps) 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setSelectedFiles(Array.from(e.target.files))
+      const files = Array.from(e.target.files)
+      setSelectedFiles(files)
       setError(null)
       setSuccess(null)
+      
+      // Auto-upload files immediately after selection
+      if (files.length > 0) {
+        uploadFiles(files)
+      }
     }
   }
 
@@ -46,17 +52,24 @@ export function DocumentUpload({ categories, onUploaded }: DocumentUploadProps) 
     e.preventDefault()
     e.stopPropagation()
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setSelectedFiles(prev => [...prev, ...Array.from(e.dataTransfer.files)])
+      const files = Array.from(e.dataTransfer.files)
+      setSelectedFiles(prev => [...prev, ...files])
       setError(null)
       setSuccess(null)
+      
+      // Auto-upload files immediately after drop
+      if (files.length > 0) {
+        uploadFiles(files)
+      }
     }
   }
 
-  const uploadFiles = async () => {
-    console.log('Upload button clicked!')
-    console.log('Selected files:', selectedFiles.length)
+  const uploadFiles = async (filesToUpload?: File[]) => {
+    const files = filesToUpload || selectedFiles
+    console.log('Upload started!')
+    console.log('Files to upload:', files.length)
     
-    if (selectedFiles.length === 0) {
+    if (files.length === 0) {
       setError('Please select files to upload.')
       return
     }
@@ -73,7 +86,7 @@ export function DocumentUpload({ categories, onUploaded }: DocumentUploadProps) 
       }
       console.log('User authenticated:', user.id)
 
-      for (const file of selectedFiles) {
+      for (const file of files) {
         console.log('Uploading file:', file.name)
         
         // Generate unique filename with user folder structure
@@ -153,7 +166,7 @@ export function DocumentUpload({ categories, onUploaded }: DocumentUploadProps) 
         console.log('Database insert successful')
       }
 
-            setSuccess(`Successfully uploaded ${selectedFiles.length} file(s)! Documents have been intelligently analyzed and categorized.`)
+            setSuccess(`Successfully uploaded ${files.length} file(s)! Documents have been intelligently analyzed and categorized.`)
       setSelectedFiles([])
       onUploaded()
 
@@ -273,26 +286,35 @@ export function DocumentUpload({ categories, onUploaded }: DocumentUploadProps) 
         </div>
       )}
 
-      {/* Upload Button */}
-      <div className="mt-6">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault()
-            console.log('Button clicked, calling uploadFiles...')
-            uploadFiles()
-          }}
-          disabled={isUploading || selectedFiles.length === 0}
-          className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isUploading ? 'Uploading...' : `Upload ${selectedFiles.length} file(s)`}
-        </button>
-        
-        {/* Debug Info */}
-        <div className="mt-2 text-xs text-gray-500">
-          <p>Files: {selectedFiles.length} | AI Auto-Detection: Enabled | Uploading: {isUploading ? 'Yes' : 'No'}</p>
+      {/* Upload Button - Only show when files are selected and not uploading */}
+      {selectedFiles.length > 0 && !isUploading && (
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              console.log('Button clicked, calling uploadFiles...')
+              uploadFiles()
+            }}
+            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+          >
+            Upload {selectedFiles.length} file(s)
+          </button>
         </div>
-      </div>
+      )}
+      
+      {/* Upload Status */}
+      {isUploading && (
+        <div className="mt-6">
+          <div className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-orange-500">
+            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Uploading and analyzing documents...
+          </div>
+        </div>
+      )}
     </div>
   )
 }
